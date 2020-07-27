@@ -28,8 +28,9 @@ olc_Sprite* olc_SpriteCreate(int32_t w, int32_t h);
 olc_Sprite* olc_SpriteLoad(const char *sImageFile);
 void        olc_SpriteDestroy(olc_Sprite* sprite);
 
+olc_Sprite* olc_SpriteLoadFromFile(const char *sImageFile);
+
 // TODO
-// olc_Sprite* olc_SpriteLoadFromFile(const char *sImageFile);
 // olc_Sprite* olc_SpriteLoadFromPGESprFile(const char *sImageFile);
 // int32_t   olc_SpriteSaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
 
@@ -51,10 +52,9 @@ void       olc_DecalUpdate(olc_Decal* decal);
 // olc_Decal*      olc_RenderableGetDecal(olc_Renderable* renderable);
 
 
-// TODO
-// int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
-//     bool full_screen, bool vsync);
-// int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
+int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
+     bool full_screen, bool vsync);
+int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
 
 
 // Hardware Interfaces
