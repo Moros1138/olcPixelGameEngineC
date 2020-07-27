@@ -48,6 +48,9 @@ size_t vector_size(vector* v);
 static const uint8_t  olc_nDefaultAlpha = 0xFF;
 static const uint32_t olc_nDefaultPixel = (olc_nDefaultAlpha << 24);
 
+
+#define olc_SOLIDLINE 0xffffffff
+
 enum olc_rcode
 {
     olc_RCODE_FAIL = 0,

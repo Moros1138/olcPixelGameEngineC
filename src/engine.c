@@ -353,7 +353,7 @@ void olc_DefaultState()
     PGE.nTargetLayer = 0;
     PGE.nLastFPS = 0.0f;
     PGE.bMouseIsVisible = true;
-};
+}
 
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h, bool full_screen, bool vsync)
 {
@@ -601,9 +601,92 @@ bool Draw(int32_t x, int32_t y, olc_Pixel p)
     return false;
 }
 
+// rotate the pattern to the left
+bool rol(uint32_t* pattern)
+{
+    *pattern = (*pattern << 1) | (*pattern >> 31);
+    return (*pattern & 1) ? true : false;
+}
+
 // Draws a line from (x1,y1) to (x2,y2)
 void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern)
-{}
+{
+    int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i, temp;
+    dx = x2 - x1; dy = y2 - y1;
+
+    // straight lines idea by gurkanctn
+    if (dx == 0) // Line is vertical
+    {
+        if (y2 < y1)
+        {
+            temp = y1;
+            y1 = y2;
+            y2 = temp;
+        }
+        for (y = y1; y <= y2; y++) if (rol(&pattern)) Draw(x1, y, p);
+        return;
+    }
+
+    if (dy == 0) // Line is horizontal
+    {
+        if (x2 < x1)
+        {
+            temp = x1;
+            x1 = x2;
+            x2 = temp;
+        }
+        for (x = x1; x <= x2; x++) if (rol(&pattern)) Draw(x, y1, p);
+        return;
+    }
+
+    // Line is Funk-aye
+    dx1 = abs(dx); dy1 = abs(dy);
+    px = 2 * dy1 - dx1;	py = 2 * dx1 - dy1;
+    if (dy1 <= dx1)
+    {
+        if (dx >= 0)
+        { x = x1; y = y1; xe = x2; }
+        else
+        { x = x2; y = y2; xe = x1; }
+
+        if (rol(&pattern)) Draw(x, y, p);
+
+        for (i = 0; x<xe; i++)
+        {
+            x = x + 1;
+            if (px<0)
+                px = px + 2 * dy1;
+            else
+            {
+                if ((dx<0 && dy<0) || (dx>0 && dy>0)) y = y + 1; else y = y - 1;
+                px = px + 2 * (dy1 - dx1);
+            }
+            if (rol(&pattern)) Draw(x, y, p);
+        }
+    }
+    else
+    {
+        if (dy >= 0)
+        { x = x1; y = y1; ye = y2; }
+        else
+        { x = x2; y = y2; ye = y1; }
+
+        if (rol(&pattern)) Draw(x, y, p);
+
+        for (i = 0; y<ye; i++)
+        {
+            y = y + 1;
+            if (py <= 0)
+                py = py + 2 * dx1;
+            else
+            {
+                if ((dx<0 && dy<0) || (dx>0 && dy>0)) x = x + 1; else x = x - 1;
+                py = py + 2 * (dx1 - dy1);
+            }
+            if (rol(&pattern)) Draw(x, y, p);
+        }
+    }
+}
 
 // Draws a circle located at (x,y) with radius
 void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
@@ -683,13 +766,64 @@ void GradientFillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pi
 
 // Draws a single line of text
 void DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale)
-{}
+{
+    int32_t sx = 0;
+    int32_t sy = 0;
+    int32_t m = PGE.nPixelMode;
+    // Thanks @tucna, spotted bug with col.ALPHA :P
+    if(col.a != 255)		SetPixelMode(olc_PIXELMODE_ALPHA);
+    else					SetPixelMode(olc_PIXELMODE_MASK);
+    for(int i = 0; i < strlen(sText); i++)
+    {
+        char c = sText[i];
+        if (c == '\n')
+        {
+            sx = 0; sy += 8 * scale;
+        }
+        else
+        {
+            int32_t ox = (c - 32) % 16;
+            int32_t oy = (c - 32) / 16;
+
+            if (scale > 1)
+            {
+                for (uint32_t i = 0; i < 8; i++)
+                    for (uint32_t j = 0; j < 8; j++)
+                        if(olc_Sprite_GetPixel(PGE.fontSprite,i + ox * 8, j + oy * 8).r > 0)
+                            for (uint32_t is = 0; is < scale; is++)
+                                for (uint32_t js = 0; js < scale; js++)
+                                    Draw(x + sx + (i*scale) + is, y + sy + (j*scale) + js, col);
+            }
+            else
+            {
+                for (uint32_t i = 0; i < 8; i++)
+                    for (uint32_t j = 0; j < 8; j++)
+                        if(olc_Sprite_GetPixel(PGE.fontSprite,i + ox * 8, j + oy * 8).r > 0)
+                            Draw(x + sx + i, y + sy + j, col);
+            }
+            sx += 8 * scale;
+        }
+    }
+    SetPixelMode(m);
+}
 
 olc_vi2d GetTextSize(const char* s)
 {
-    olc_vi2d ret;
+    olc_vi2d size = { 0,1 };
+    olc_vi2d pos = { 0,1 };
+
+    for(int i = 0; i < strlen(s); i++)
+    {
+        if(s[i] == '\n') { pos.y++;  pos.x = 0; }
+        else pos.x++;
+        size.x = (size.x > pos.x) ? size.x : pos.x;
+        size.y = (size.y > pos.y) ? size.y : pos.y;
+    }
     
-    return ret;
+    size.x = size.x * 8;
+    size.y = size.y * 8;
+
+    return size;
 }
 
 // Clears entire draw target to Pixel
