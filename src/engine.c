@@ -695,36 +695,320 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
 
 // Draws a circle located at (x,y) with radius
 void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
-{}
+{ // Thanks to IanM-Matrix1 #PR121
+    if (radius < 0 || x < -radius || y < -radius || x - GetDrawTargetWidth() > radius || y - GetDrawTargetHeight() > radius)
+        return;
+
+    if (radius > 0)
+    {
+        int x0 = 0;
+        int y0 = radius;
+        int d = 3 - 2 * radius;
+
+        while (y0 >= x0) // only formulate 1/8 of circle
+        {
+            // Draw even octants
+            if (mask & 0x01) Draw(x + x0, y - y0, p);// Q6 - upper right right
+            if (mask & 0x04) Draw(x + y0, y + x0, p);// Q4 - lower lower right
+            if (mask & 0x10) Draw(x - x0, y + y0, p);// Q2 - lower left left
+            if (mask & 0x40) Draw(x - y0, y - x0, p);// Q0 - upper upper left
+            if (x0 != 0 && x0 != y0)
+            {
+                if (mask & 0x02) Draw(x + y0, y - x0, p);// Q7 - upper upper right
+                if (mask & 0x08) Draw(x + x0, y + y0, p);// Q5 - lower right right
+                if (mask & 0x20) Draw(x - y0, y + x0, p);// Q3 - lower lower left
+                if (mask & 0x80) Draw(x - x0, y - y0, p);// Q1 - upper left left
+            }
+
+            if (d < 0)
+                d += 4 * x0++ + 6;
+            else
+                d += 4 * (x0++ - y0--) + 10;
+        }
+    }
+    else
+        Draw(x, y, p);
+}
 
 // Fills a circle located at (x,y) with radius
 void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p)
-{}
+{ // Thanks to IanM-Matrix1 #PR121
+    if (radius < 0 || x < -radius || y < -radius || x - GetDrawTargetWidth() > radius || y - GetDrawTargetHeight() > radius)
+        return;
+
+    if (radius > 0)
+    {
+        int x0 = 0;
+        int y0 = radius;
+        int d = 3 - 2 * radius;
+
+        while (y0 >= x0)
+        {
+            drawline(x - y0, x + y0,y - x0, p);
+            if (x0 > 0)	drawline(x - y0, x + y0, y + x0, p);
+
+            if (d < 0)
+                d += 4 * x0++ + 6;
+            else
+            {
+                if (x0 != y0)
+                {
+                    drawline(x - x0, x + x0, y - y0, p);
+                    drawline(x - x0, x + x0, y + y0, p);
+                }
+                d += 4 * (x0++ - y0--) + 10;
+            }
+        }
+    }
+    else
+        Draw(x, y, p);
+}
 
 // Draws a rectangle at (x,y) to (x+w,y+h)
 void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
-{}
+{
+    DrawLine(x, y, x+w, y, p, olc_SOLID);
+    DrawLine(x+w, y, x+w, y+h, p, olc_SOLID);
+    DrawLine(x+w, y+h, x, y+h, p, olc_SOLID);
+    DrawLine(x, y+h, x, y, p, olc_SOLID);
+}
 
 // Fills a rectangle at (x,y) to (x+w,y+h)
 void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
-{}
+{
+    int32_t x2 = x + w;
+    int32_t y2 = y + h;
+
+    if (x < 0) x = 0;
+    if (x >= (int32_t)GetDrawTargetWidth()) x = (int32_t)GetDrawTargetWidth();
+    if (y < 0) y = 0;
+    if (y >= (int32_t)GetDrawTargetHeight()) y = (int32_t)GetDrawTargetHeight();
+
+    if (x2 < 0) x2 = 0;
+    if (x2 >= (int32_t)GetDrawTargetWidth()) x2 = (int32_t)GetDrawTargetWidth();
+    if (y2 < 0) y2 = 0;
+    if (y2 >= (int32_t)GetDrawTargetHeight()) y2 = (int32_t)GetDrawTargetHeight();
+
+    for (int i = x; i < x2; i++)
+        for (int j = y; j < y2; j++)
+            Draw(i, j, p);
+}
 
 // Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
 void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
-{}
+{
+    DrawLine(x1, y1, x2, y2, p, olc_SOLID);
+    DrawLine(x2, y2, x3, y3, p, olc_SOLID);
+    DrawLine(x3, y3, x1, y1, p, olc_SOLID);
+}
 
-// Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+// https://www.avrfreaks.net/sites/default/files/triangles.c
 void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
-{}
+{
+    int t1x, t2x, y, minx, maxx, t1xp, t2xp;
+    bool changed1 = false;
+    bool changed2 = false;
+    int signx1, signx2, dx1, dy1, dx2, dy2;
+    int e1, e2;
+    // Sort vertices
+    if (y1>y2) {swap_int(&y1, &y2); swap_int(&x1, &x2); }
+    if (y1>y3) {swap_int(&y1, &y3); swap_int(&x1, &x3); }
+    if (y2>y3) {swap_int(&y2, &y3); swap_int(&x2, &x3); }
+
+    t1x = t2x = x1; y = y1;   // Starting points
+    dx1 = (int)(x2 - x1);
+    if (dx1<0) { dx1 = -dx1; signx1 = -1; }	else signx1 = 1;
+    dy1 = (int)(y2 - y1);
+
+    dx2 = (int)(x3 - x1);
+    if (dx2<0) { dx2 = -dx2; signx2 = -1; } else signx2 = 1;
+    dy2 = (int)(y3 - y1);
+
+    if (dy1 > dx1) { swap_int(&dx1, &dy1); changed1 = true; }
+    if (dy2 > dx2) { swap_int(&dy2, &dx2); changed2 = true; }
+
+    e2 = (int)(dx2 >> 1);
+    // Flat top, just process the second half
+    if (y1 == y2) goto next;
+    e1 = (int)(dx1 >> 1);
+
+    for (int i = 0; i < dx1;) {
+        t1xp = 0; t2xp = 0;
+        if (t1x<t2x) { minx = t1x; maxx = t2x; }
+        else { minx = t2x; maxx = t1x; }
+        // process first line until y value is about to change
+        while (i<dx1) {
+            i++;
+            e1 += dy1;
+            while (e1 >= dx1) {
+                e1 -= dx1;
+                if (changed1) t1xp = signx1;//t1x += signx1;
+                else          goto next1;
+            }
+            if (changed1) break;
+            else t1x += signx1;
+        }
+        // Move line
+    next1:
+        // process second line until y value is about to change
+        while (1) {
+            e2 += dy2;
+            while (e2 >= dx2) {
+                e2 -= dx2;
+                if (changed2) t2xp = signx2;//t2x += signx2;
+                else          goto next2;
+            }
+            if (changed2)     break;
+            else              t2x += signx2;
+        }
+    next2:
+        if (minx>t1x) minx = t1x;
+        if (minx>t2x) minx = t2x;
+        if (maxx<t1x) maxx = t1x;
+        if (maxx<t2x) maxx = t2x;
+        drawline(minx, maxx, y, p);    // Draw line from min to max points found on the y
+                                    // Now increase y
+        if (!changed1) t1x += signx1;
+        t1x += t1xp;
+        if (!changed2) t2x += signx2;
+        t2x += t2xp;
+        y += 1;
+        if (y == y2) break;
+
+    }
+next:
+    // Second half
+    dx1 = (int)(x3 - x2); if (dx1<0) { dx1 = -dx1; signx1 = -1; }
+    else signx1 = 1;
+    dy1 = (int)(y3 - y2);
+    t1x = x2;
+
+    if (dy1 > dx1) {   // swap values
+        swap_int(&dy1, &dx1);
+        changed1 = true;
+    }
+    else changed1 = false;
+
+    e1 = (int)(dx1 >> 1);
+
+    for (int i = 0; i <= dx1; i++) {
+        t1xp = 0; t2xp = 0;
+        if (t1x<t2x) { minx = t1x; maxx = t2x; }
+        else { minx = t2x; maxx = t1x; }
+        // process first line until y value is about to change
+        while (i<dx1) {
+            e1 += dy1;
+            while (e1 >= dx1) {
+                e1 -= dx1;
+                if (changed1) { t1xp = signx1; break; }//t1x += signx1;
+                else          goto next3;
+            }
+            if (changed1) break;
+            else   	   	  t1x += signx1;
+            if (i<dx1) i++;
+        }
+    next3:
+        // process second line until y value is about to change
+        while (t2x != x3) {
+            e2 += dy2;
+            while (e2 >= dx2) {
+                e2 -= dx2;
+                if (changed2) t2xp = signx2;
+                else          goto next4;
+            }
+            if (changed2)     break;
+            else              t2x += signx2;
+        }
+    next4:
+
+        if (minx>t1x) minx = t1x;
+        if (minx>t2x) minx = t2x;
+        if (maxx<t1x) maxx = t1x;
+        if (maxx<t2x) maxx = t2x;
+        drawline(minx, maxx, y, p);
+        if (!changed1) t1x += signx1;
+        t1x += t1xp;
+        if (!changed2) t2x += signx2;
+        t2x += t2xp;
+        y += 1;
+        if (y>y3) return;
+    }
+
+}
 
 // Draws an entire sprite at well in my defencelocation (x,y)
 void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip)
-{}
+{
+    if (sprite == NULL)
+        return;
+
+    int32_t fxs = 0, fxm = 1, fx = 0;
+    int32_t fys = 0, fym = 1, fy = 0;
+    
+    if (flip & olc_SPRITEFLIP_HORIZ) { fxs = sprite->width - 1; fxm = -1; }
+    if (flip & olc_SPRITEFLIP_VERT) { fys = sprite->height - 1; fym = -1; }
+
+    if (scale > 1)
+    {
+        fx = fxs;
+        for (int32_t i = 0; i < sprite->width; i++, fx += fxm)
+        {
+            fy = fys;
+            for (int32_t j = 0; j < sprite->height; j++, fy += fym)
+                for (uint32_t is = 0; is < scale; is++)
+                    for (uint32_t js = 0; js < scale; js++)
+                        Draw(x + (i*scale) + is, y + (j*scale) + js, olc_Sprite_GetPixel(sprite, fx, fy));
+        }
+    }
+    else
+    {
+        fx = fxs;
+        for (int32_t i = 0; i < sprite->width; i++, fx += fxm)
+        {
+            fy = fys;
+            for (int32_t j = 0; j < sprite->height; j++, fy += fym)
+                Draw(x + i, y + j, olc_Sprite_GetPixel(sprite, fx, fy));
+        }
+    }
+
+}
 
 // Draws an area of a sprite at location (x,y), where the
 // selected area is (ox,oy) to (ox+w,oy+h)
 void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip)
-{}
+{
+    if (sprite == NULL)
+        return;
+
+    int32_t fxs = 0, fxm = 1, fx = 0;
+    int32_t fys = 0, fym = 1, fy = 0;
+    if (flip & olc_SPRITEFLIP_HORIZ) { fxs = w - 1; fxm = -1; }
+    if (flip & olc_SPRITEFLIP_VERT) { fys = h - 1; fym = -1; }
+
+    if (scale > 1)
+    {
+        fx = fxs;
+        for (int32_t i = 0; i < w; i++, fx += fxm)
+        {
+            fy = fys;
+            for (int32_t j = 0; j < h; j++, fy += fym)
+                for (uint32_t is = 0; is < scale; is++)
+                    for (uint32_t js = 0; js < scale; js++)
+                        Draw(x + (i*scale) + is, y + (j*scale) + js, olc_Sprite_GetPixel(sprite, fx + ox, fy + oy));
+        }
+    }
+    else
+    {
+        fx = fxs;
+        for (int32_t i = 0; i < w; i++, fx += fxm)
+        {
+            fy = fys;
+            for (int32_t j = 0; j < h; j++, fy += fym)
+                Draw(x + i, y + j, olc_Sprite_GetPixel(sprite, fx + ox, fy + oy));
+        }
+    }
+
+}
 
 // Decal Quad functions
 

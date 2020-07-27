@@ -49,7 +49,7 @@ static const uint8_t  olc_nDefaultAlpha = 0xFF;
 static const uint32_t olc_nDefaultPixel = (olc_nDefaultAlpha << 24);
 
 
-#define olc_SOLIDLINE 0xffffffff
+#define olc_SOLID 0xffffffff
 
 enum olc_rcode
 {
@@ -315,8 +315,13 @@ void olc_DefaultState();
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
     bool full_screen, bool vsync);
 int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
-void EngineThread();
     
+bool DefaultOnUserCreate();
+bool DefaultOnUserUpdate(float);
+bool DefaultOnUserDestroy();
+
+void EngineThread();
+
 
 // Hardware Interfaces
 
