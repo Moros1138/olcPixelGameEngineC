@@ -401,6 +401,25 @@ void olc_PGE_Terminate();
 #include <SDL2/SDL_keyboard.h>
 #include <SDL2/SDL_image.h>
 
+static SDL_Window*   olc_Window = NULL;
+static SDL_Renderer* olc_Renderer = NULL;
+static SDL_Rect rViewport;
+typedef struct
+{
+    int id;
+    SDL_Texture* t;
+} texturedata;
+
+static vector mapTextures;
+static int nActiveTexture = -1;
+static int nTextureID = 0;
+
+void texturemap_init(vector *v);
+void texturemap_destroy(vector* v);
+void texturemap_delete(vector* v, int id);
+SDL_Texture* texturemap_get(vector* v, int id);
+void texturemap_set(vector* v, int id, SDL_Texture* texture);
+
 void       olc_Renderer_PrepareDevice();
 int32_t    olc_Renderer_CreateDevice(vector params, bool bFullScreen, bool bVSYNC);
 int32_t    olc_Renderer_DestroyDevice();

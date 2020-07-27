@@ -730,44 +730,249 @@ void olc_PGE_Terminate()
 
 // RENDERER
 
+
+void texturemap_init(vector* v)
+{
+    vector_init(v);
+}
+
+void texturemap_destroy(vector* v)
+{
+    vector_free(v);
+}
+
+void texturemap_delete(vector* v, int id)
+{
+    for(int i = 0; i < v->size; i++)
+    {
+        texturedata* temp = (texturedata*)vector_get(v, i);
+        if(id == temp->id)
+        {
+            SDL_DestroyTexture(temp->t);
+            temp->t = NULL;
+            vector_remove(v, i);
+            return;
+        }
+    }
+}
+
+SDL_Texture* texturemap_get(vector* v, int id)
+{
+    for(int i = 0; i < v->size; i++)
+    {
+        texturedata* temp = (texturedata*)vector_get(v, i);
+        if(id == temp->id)
+            return temp->t;
+    }
+   
+    return 0;
+}
+
+void texturemap_set(vector* v, int id, SDL_Texture* texture)
+{
+    // check if key already exists
+    for(int i = 0; i < v->size; i++)
+    {
+        texturedata* temp = (texturedata*)vector_get(v, i);
+        if(id == temp->id)
+        {
+            temp->t = texture;
+            return;
+        }
+    }
+
+    // if we made it here, we have to create a new inputdata
+    texturedata* temp = (texturedata*)malloc(sizeof(texturedata));
+    if(temp == NULL)
+    {
+        fprintf(stderr, "Failed to allocate memory.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    // set data
+    temp->id = id;
+    temp->t = texture;
+
+    // push into vector
+    vector_push(v, temp);
+}
+
+
+
 void       olc_Renderer_PrepareDevice()
 {}
 
 int32_t    olc_Renderer_CreateDevice(vector params, bool bFullScreen, bool bVSYNC)
-{}
+{
+    olc_Window   = (SDL_Window*)vector_get(&params, 0);
+    olc_Renderer = (SDL_Renderer*)vector_get(&params, 1);
+    texturemap_init(&mapTextures);
+}
 
 int32_t    olc_Renderer_DestroyDevice()
+{
+    for(int i = 0; i < mapTextures.size; i++)
+    {
+        texturemap_delete(&mapTextures, i);
+    }
+    texturemap_destroy(&mapTextures);
+    return olc_RCODE_OK;
+}
+
+void olc_Renderer_DisplayFrame()
+{
+    SDL_RenderPresent(olc_Renderer);
+}
+
+void olc_Renderer_PrepareDrawing()
 {}
 
-void       olc_Renderer_DisplayFrame()
-{}
+void olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint)
+{
+    SDL_Texture* texture = texturemap_get(&mapTextures, nActiveTexture);
 
-void       olc_Renderer_PrepareDrawing()
-{}
+    // Apply Tint
+    SDL_SetTextureColorMod(texture, tint.r, tint.g, tint.b);
+    SDL_SetTextureAlphaMod(texture, tint.a);
 
-void       olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint)
-{}
+    // Draw Texture
+    SDL_RenderCopy(olc_Renderer, texture, NULL, NULL);
+}
 
-void       olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
-{}
+olc_vf2d PointToScreen(olc_vf2d point)
+{
+    olc_vf2d ret;
 
-uint32_t   olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
-{}
+    ret.x = (point.x + 1.0f) * (float)rViewport.w * 0.5f;
+    ret.y = (point.y - 1.0f) * (float)rViewport.h * 0.5f * -1.0f;
+    
+    return ret;
+}
 
-void       olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr)
-{}
+SDL_Rect GetSubTexture(const olc_vf2d uv[4], olc_Decal *decal)
+{
+    // get the top left of the sub-texture
+    olc_vf2d topLeft, bottomRight;
+    
+    topLeft.x = uv[0].x / decal->vUVScale.x;
+    topLeft.y = uv[0].y / decal->vUVScale.y;
 
-uint32_t   olc_Renderer_DeleteTexture(const uint32_t id)
-{}
+    // get the bottom right of the sub-texture
+    bottomRight.x = uv[2].x / decal->vUVScale.x;
+    bottomRight.y = uv[2].y / decal->vUVScale.y;
 
-void       olc_Renderer_ApplyTexture(uint32_t id)
-{}
+    // generate rectangle for the sub-texture
+    SDL_Rect rect;
+    
+    rect.x = topLeft.x;
+    rect.y = topLeft.y;
+    rect.w = bottomRight.x - topLeft.x;
+    rect.h = bottomRight.y - topLeft.x;
+    
+    return rect;
+}
 
-void       olc_Renderer_UpdateViewport(const olc_vi2d pos, const olc_vi2d size)
-{}
+SDL_Rect VecToRect(olc_vf2d pos, olc_vf2d size)
+{
+    SDL_Rect rect;
 
-void       olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
-{}
+    rect.x = pos.x;	rect.y = pos.y;
+    rect.w = size.x; rect.h = size.y;
+
+    return rect;
+}
+
+void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
+{
+    if(decal->decal == NULL)
+        return;
+    
+    float fAngle;
+    olc_vf2d vSize;
+
+    SDL_Texture* texture = texturemap_get(&mapTextures, decal->decal->id);
+
+    // convert decal positions to screen space
+    olc_vf2d pos[4] = {
+        PointToScreen(decal->pos[0]),
+        PointToScreen(decal->pos[1]),
+        PointToScreen(decal->pos[2]),
+        PointToScreen(decal->pos[3])
+    };
+
+    // only calculate the angle if we have to
+    if(pos[0].x == pos[1].x)
+    {
+        
+        vSize.x  = pos[3].x - pos[0].x;
+        vSize.y = pos[1].y - pos[0].y;
+        fAngle = 0;
+    }
+    else
+    {
+        float a = pos[3].x - pos[0].x;
+        float b = pos[3].y - pos[0].y;
+        
+        float c = pos[1].x - pos[0].x;
+        float d = pos[1].y - pos[0].y;
+        
+        vSize.x = sqrt((a * a) + (b * b));
+        vSize.y = sqrt((c * c) + (d * d));
+
+        fAngle = (atan2(pos[1].y - pos[0].y, pos[1].x - pos[0].x) * 180 / 3.14159f) - 90;
+    }
+    
+    SDL_Rect src  = GetSubTexture(decal->uv, decal->decal);
+    SDL_Rect dest = VecToRect(pos[0], vSize);
+    SDL_Point center; center.x = 0; center.y = 0;
+
+    // Apply Tint
+    SDL_SetTextureColorMod(texture, decal->tint[0].r, decal->tint[0].g, decal->tint[0].b);
+    SDL_SetTextureAlphaMod(texture, decal->tint[0].a);
+
+    // Draw Texture
+    SDL_RenderCopyEx(olc_Renderer, texture, &src, &dest, fAngle, &center, SDL_FLIP_NONE);
+}
+
+uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
+{
+    int id = nTextureID; nTextureID++;
+    SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET, width, height);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    texturemap_set(&mapTextures, id, texture);
+    return id;
+}
+
+void olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr)
+{
+    SDL_Texture* texture = texturemap_get(&mapTextures, id);
+    SDL_UpdateTexture(texturemap_set, NULL, olc_Sprite_GetData(spr), spr->width * 4);
+}
+
+uint32_t olc_Renderer_DeleteTexture(const uint32_t id)
+{
+    texturemap_delete(&mapTextures, id);
+    return id;
+}
+
+void olc_Renderer_ApplyTexture(uint32_t id)
+{
+    nActiveTexture = id;
+}
+
+void olc_Renderer_UpdateViewport(const olc_vi2d pos, const olc_vi2d size)
+{
+    rViewport.x = pos.x;  rViewport.y = pos.y;
+    rViewport.w = size.x; rViewport.h = size.y;
+    
+    SDL_RenderSetViewport(olc_Renderer, &rViewport);
+}
+
+void olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
+{
+    SDL_SetRenderDrawColor(olc_Renderer, p.r, p.g, p.b, p.a);
+    SDL_RenderClear(olc_Renderer);
+}
 
 
 // PLATFORM
