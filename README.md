@@ -116,17 +116,38 @@ void olc_PGE_UpdateViewport();
 void olc_PGE_ConstructFontSheet();
 void olc_PGE_CoreUpdate();
 void olc_PGE_PrepareEngine();
-// TODO
-// void olc_PGE_UpdateMouseState(int32_t button, bool state);
-// void olc_PGE_UpdateKeyState(int32_t key, bool state);
-// void olc_PGE_UpdateMouseFocus(bool state);
-// void olc_PGE_UpdateKeyFocus(bool state);
-// void olc_PGE_Terminate();
+void olc_PGE_UpdateMouseState(int32_t button, bool state);
+void olc_PGE_UpdateKeyState(int32_t key, bool state);
+void olc_PGE_UpdateMouseFocus(bool state);
+void olc_PGE_UpdateKeyFocus(bool state);
+void olc_PGE_Terminate();
 
-
-// TODO
 // RENDERER
+void       olc_Renderer_PrepareDevice();
+int32_t    olc_Renderer_CreateDevice(vector params, bool bFullScreen, bool bVSYNC);
+int32_t    olc_Renderer_DestroyDevice();
+void       olc_Renderer_DisplayFrame();
+void       olc_Renderer_PrepareDrawing();
+void       olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint);
+void       olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal);
+uint32_t   olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height);
+void       olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr);
+uint32_t   olc_Renderer_DeleteTexture(const uint32_t id);
+void       olc_Renderer_ApplyTexture(uint32_t id);
+void       olc_Renderer_UpdateViewport(const olc_vi2d pos, const olc_vi2d size);
+void       olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth);
+
+
+// PLATFORM
 
 // TODO
-// PLATFORM
+// int32_t olc_Platform_ApplicationStartUp();
+// int32_t olc_Platform_ApplicationCleanUp();
+// int32_t olc_Platform_ThreadStartUp();
+// int32_t olc_Platform_ThreadCleanUp();
+// int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize);
+// int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen);
+// int32_t olc_Platform_SetWindowTitle(const char* s);
+// int32_t olc_Platform_StartSystemEventLoop();
+// int32_t olc_Platform_HandleSystemEvent();
 ```
