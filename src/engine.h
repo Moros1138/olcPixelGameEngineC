@@ -56,7 +56,7 @@ enum olc_rcode
 };
 
 // O------------------------------------------------------------------------------O
-// | olc::Pixel - Represents a 32-Bit RGBA colour                                 |
+// | olc_Pixel - Represents a 32-Bit RGBA colour                                  |
 // O------------------------------------------------------------------------------O
 typedef struct Pixel
 {
@@ -111,7 +111,7 @@ enum olc_Key
 };
 
 // O------------------------------------------------------------------------------O
-// | olc::vX2d - A generic 2D vector type                                         |
+// | olc_vX2d - A generic 2D vector type                                          |
 // O------------------------------------------------------------------------------O
 
 typedef struct
@@ -130,7 +130,7 @@ typedef struct
 } olc_vd2d;
 
 // O------------------------------------------------------------------------------O
-// | olc::HWButton - Represents the state of a hardware button (mouse/key/joy)    |
+// | olc_HWButton - Represents the state of a hardware button (mouse/key/joy)     |
 // O------------------------------------------------------------------------------O
 typedef struct HWButton
 {
@@ -143,7 +143,7 @@ typedef struct HWButton
 
 
 // O------------------------------------------------------------------------------O
-// | olc::Sprite - An image represented by a 2D array of olc::Pixel               |
+// | olc_Sprite - An image represented by a 2D array of olc_Pixel                 |
 // O------------------------------------------------------------------------------O
 enum olc_SpriteMode
 {
@@ -182,7 +182,7 @@ olc_Pixel olc_Sprite_SampleBL(olc_Sprite* sprite, float u, float v);
 uint32_t* olc_Sprite_GetData(olc_Sprite* sprite);
 
 // O------------------------------------------------------------------------------O
-// | olc::Decal - A GPU resident storage of an olc::Sprite                        |
+// | olc_Decal - A GPU resident storage of an olc_Sprite                          |
 // O------------------------------------------------------------------------------O
 typedef struct Decal
 {
@@ -196,7 +196,7 @@ void       olc_Decal_Destroy(olc_Decal* decal);
 void       olc_Decal_Update(olc_Decal* decal);
 
 // O------------------------------------------------------------------------------O
-// | olc::Renderable - Convenience class to keep a sprite and decal together      |
+// | olc_Renderable - Convenience class to keep a sprite and decal together       |
 // O------------------------------------------------------------------------------O
 typedef struct Renderable
 {
@@ -364,28 +364,59 @@ bool IsMouseCursorVisible();
 
 // DRAWING ROUTINES
 
-
 // Draws a single Pixel
 bool Draw(int32_t x, int32_t y, olc_Pixel p);
 // Draws a line from (x1,y1) to (x2,y2)
-// void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern);
-// // Draws a circle located at (x,y) with radius
-// void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask);
-// // Fills a circle located at (x,y) with radius
-// void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p);
-// // Draws a rectangle at (x,y) to (x+w,y+h)
-// void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
-// // Fills a rectangle at (x,y) to (x+w,y+h)
-// void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
-// // Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
-// void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
-// // Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
-// void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
-// // Draws an entire sprite at well in my defencelocation (x,y)
-// void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip);
-// // Draws an area of a sprite at location (x,y), where the
-// // selected area is (ox,oy) to (ox+w,oy+h)
-// void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip);
+void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern);
+// Draws a circle located at (x,y) with radius
+void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask);
+// Fills a circle located at (x,y) with radius
+void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p);
+// Draws a rectangle at (x,y) to (x+w,y+h)
+void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
+// Fills a rectangle at (x,y) to (x+w,y+h)
+void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
+// Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
+// Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
+// Draws an entire sprite at well in my defencelocation (x,y)
+void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip);
+// Draws an area of a sprite at location (x,y), where the
+// selected area is (ox,oy) to (ox+w,oy+h)
+void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip);
+
+
+// Decal Quad functions
+
+// Draws a whole decal, with optional scale and tinting
+void DrawDecal(const olc_vf2d pos, olc_Decal *decal, const olc_vf2d scale, const olc_Pixel tint);
+// Draws a region of a decal, with optional scale and tinting
+void DrawPartialDecal(const olc_vf2d pos, olc_Decal* decal, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint);
+// Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
+void DrawExplicitDecal(olc_Decal* decal, const olc_vf2d *pos, const olc_vf2d *uv, const olc_Pixel *col);
+// Draws a decal with 4 arbitrary points, warping the texture to look "correct"
+void DrawWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_Pixel tint);
+// As above, but you can specify a region of a decal source sprite
+void DrawPartialWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_vf2d source_pos, const olc_vf2d source_size, const olc_Pixel tint);
+// Draws a decal rotated to specified angle, wit point of rotation offset
+void DrawRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d scale, const olc_Pixel tint);
+void DrawPartialRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint);
+// Draws a multiline string as a decal, with tiniting and scaling
+void DrawStringDecal(const olc_vf2d pos, const char* sText, const olc_Pixel col, const olc_vf2d scale);
+// Draws a single shaded filled rectangle as a decal
+void FillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel col);
+// Draws a corner shaded rectangle as a decal
+void GradientFillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
+
+
+// Draws a single line of text
+void DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale);
+olc_vi2d GetTextSize(const char* s);
+// Clears entire draw target to Pixel
+void Clear(olc_Pixel p);
+
+
 
 
 // CONFIGURATION ROUTINES
