@@ -261,22 +261,75 @@ uint32_t* olc_Sprite_GetData(olc_Sprite* sprite)
 // | olc::Decal - A GPU resident storage of an olc::Sprite                        |
 // O------------------------------------------------------------------------------O
 olc_Decal* olc_Decal_Create(olc_Sprite* sprite)
-{ return NULL; }
+{
+    if(sprite == NULL) return NULL;
 
-void       olc_Decal_Destroy(olc_Decal* decal)
-{}
+    olc_Decal* decal = (olc_Decal*)malloc(sizeof(olc_Decal));
+    if(decal == NULL)
+    {
+        fprintf(stderr, "Error creating decal.\n");
+        exit(EXIT_FAILURE);
+    }
 
-void       olc_Decal_Update(olc_Decal* decal)
-{}
+    decal->id = -1;
+    decal->sprite = sprite;
+    decal->id = olc_Renderer_CreateTexture(decal->sprite->width, decal->sprite->height);
+    olc_Decal_Update(decal);
+    
+    return decal;
+}
+
+void olc_Decal_Destroy(olc_Decal* decal)
+{
+    if(decal->id != -1)
+    {
+        olc_Renderer_DeleteTexture(decal->id);
+        decal->id = -1;
+    }
+}
+
+void olc_Decal_Update(olc_Decal* decal)
+{
+    if(decal->sprite == NULL) return;
+    
+    decal->vUVScale.x = 1.0f / (float)decal->sprite->width;
+    decal->vUVScale.y = 1.0f / (float)decal->sprite->height;
+    olc_Renderer_ApplyTexture(decal->id);
+    olc_Renderer_UpdateTexture(decal->id, decal->sprite);
+}
 
 // O------------------------------------------------------------------------------O
 // | olc::Renderable - Convenience class to keep a sprite and decal together      |
 // O------------------------------------------------------------------------------O
 olc_Renderable* olc_Renderable_Create(uint32_t width, uint32_t height)
-{ return NULL; }
+{
+    olc_Renderable* renderable = (olc_Renderable*)malloc(sizeof(olc_Renderable));
+    if(renderable == NULL)
+    {
+        fprintf(stderr,"Error creating olc_Renderable\n");
+        exit(EXIT_FAILURE);
+    }
+
+    renderable->sprite = olc_Sprite_Create(width, height);
+    renderable->decal = olc_Decal_Create(renderable->sprite);
+    
+    return renderable;
+}
 
 olc_Renderable* olc_Renderable_Load(const char* sFile)
-{ return NULL; }
+{
+    olc_Renderable* renderable = (olc_Renderable*)malloc(sizeof(olc_Renderable));
+    if(renderable == NULL)
+    {
+        fprintf(stderr,"Error creating olc_Renderable\n");
+        exit(EXIT_FAILURE);
+    }
+
+    renderable->sprite = olc_Sprite_Load(sFile);
+    renderable->decal = olc_Decal_Create(renderable->sprite);
+    
+    return renderable;
+}
 
 olc_Sprite* olc_Renderable_GetSprite(olc_Renderable* renderable)
 { return renderable->sprite; }
@@ -286,7 +339,9 @@ olc_Decal* olc_Renderable_GetDecal(olc_Renderable* renderable)
 
 void olc_DefaultState()
 {
-    SetAppName("");
+    if(PGE.sAppName == NULL)
+        SetAppName("");
+
     PGE.nPixelMode = olc_PIXELMODE_NORMAL;
     PGE.fBlendFactor = 1.0f;
     PGE.bHasInputFocus = true;
@@ -296,7 +351,8 @@ void olc_DefaultState()
     PGE.fLastElapsed = 0.0f;
     PGE.nFrameCount = 0;
     PGE.nTargetLayer = 0;
-    PGE.nLastFPS = 0.0f;;
+    PGE.nLastFPS = 0.0f;
+    PGE.bMouseIsVisible = true;
 };
 
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h, bool full_screen, bool vsync)
@@ -582,6 +638,67 @@ void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_
 void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip)
 {}
 
+// Decal Quad functions
+
+// Draws a whole decal, with optional scale and tinting
+void DrawDecal(const olc_vf2d pos, olc_Decal *decal, const olc_vf2d scale, const olc_Pixel tint)
+{}
+
+// Draws a region of a decal, with optional scale and tinting
+void DrawPartialDecal(const olc_vf2d pos, olc_Decal* decal, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint)
+{}
+
+// Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
+void DrawExplicitDecal(olc_Decal* decal, const olc_vf2d *pos, const olc_vf2d *uv, const olc_Pixel *col)
+{}
+
+// Draws a decal with 4 arbitrary points, warping the texture to look "correct"
+void DrawWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_Pixel tint)
+{}
+
+// As above, but you can specify a region of a decal source sprite
+void DrawPartialWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_vf2d source_pos, const olc_vf2d source_size, const olc_Pixel tint)
+{}
+
+// Draws a decal rotated to specified angle, wit point of rotation offset
+void DrawRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d scale, const olc_Pixel tint)
+{}
+
+void DrawPartialRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint)
+{}
+
+// Draws a multiline string as a decal, with tiniting and scaling
+void DrawStringDecal(const olc_vf2d pos, const char* sText, const olc_Pixel col, const olc_vf2d scale)
+{}
+
+// Draws a single shaded filled rectangle as a decal
+void FillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel col)
+{}
+
+// Draws a corner shaded rectangle as a decal
+void GradientFillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR)
+{}
+
+
+
+// Draws a single line of text
+void DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale)
+{}
+
+olc_vi2d GetTextSize(const char* s)
+{
+    olc_vi2d ret;
+    
+    return ret;
+}
+
+// Clears entire draw target to Pixel
+void Clear(olc_Pixel p)
+{
+    int pixels = GetDrawTargetWidth() * GetDrawTargetHeight();
+    uint32_t* m = olc_Sprite_GetData(GetDrawTarget());
+    for(int i = 0; i < pixels; i++) m[i] = p.n;    
+}
 
 // CONFIGURATION ROUTINES
 void SetAppName(const char* title)
@@ -984,7 +1101,6 @@ void olc_PGE_Terminate()
 
 // RENDERER
 
-
 void texturemap_init(vector* v)
 {
     vector_init(v);
@@ -1050,8 +1166,6 @@ void texturemap_set(vector* v, int id, SDL_Texture* texture)
     // push into vector
     vector_push(v, temp);
 }
-
-
 
 void olc_Renderer_PrepareDevice()
 {}
