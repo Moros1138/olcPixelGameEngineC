@@ -260,32 +260,32 @@ uint32_t* olc_Sprite_GetData(olc_Sprite* sprite)
 
 // Returns true if window is currently in focus
 bool IsFocused()
-{ return olc_PGE_State.bHasInputFocus; }
+{ return PGE.bHasInputFocus; }
 
 // Get the state of a specific keyboard button
 
 olc_HWButton GetKey(uint8_t k)
-{ return olc_PGE_State.pKeyboardState[k]; }
+{ return PGE.pKeyboardState[k]; }
 
 // Get the state of a specific mouse button
 olc_HWButton GetMouse(uint32_t b)
-{ return olc_PGE_State.pMouseState[b]; }
+{ return PGE.pMouseState[b]; }
 
 // Get Mouse X coordinate in "xel" space
 int32_t GetMouseX()
-{ return olc_PGE_State.vMousePos.x; }
+{ return PGE.vMousePos.x; }
 
 // Get Mouse Y coordinate in "pixel" space
 int32_t GetMouseY()
-{ return olc_PGE_State.vMousePos.y; }
+{ return PGE.vMousePos.y; }
 
 // Get Mouse Wheel Delta
 int32_t GetMouseWheel()
-{ return olc_PGE_State.nMouseWheelDelta; }
+{ return PGE.nMouseWheelDelta; }
 
 // Get the ouse in window space
 olc_vi2d GetWindowMouse()
-{ return olc_PGE_State.vMouseWindowPos; }
+{ return PGE.vMouseWindowPos; }
 
 
 // Utility
@@ -293,35 +293,35 @@ olc_vi2d GetWindowMouse()
 
 // Returns the width of the screen in "pixels"
 int32_t ScreenWidth()
-{ return olc_PGE_State.vScreenSize.x; }
+{ return PGE.vScreenSize.x; }
 
 // Returns the height of the screen in "pixels"
 int32_t ScreenHeight()
-{ return olc_PGE_State.vScreenSize.y; }
+{ return PGE.vScreenSize.y; }
 
 // Returns the width of the currently selected drawing target in "pixels"
 int32_t GetDrawTargetWidth()
-{ return olc_PGE_State.pDrawTarget->width; }
+{ return PGE.pDrawTarget->width; }
 
 // Returns the height of the currently selected drawing target in "pixels"
 int32_t GetDrawTargetHeight()
-{ return olc_PGE_State.pDrawTarget->height; }
+{ return PGE.pDrawTarget->height; }
 
 // Returns the currently active draw target
 olc_Sprite* GetDrawTarget()
-{ return olc_PGE_State.pDrawTarget; }
+{ return PGE.pDrawTarget; }
 
 // Resize the primary screen sprite
 void SetScreenSize(int w, int h)
 {
-    olc_PGE_State.vScreenSize.x = w;
-    olc_PGE_State.vScreenSize.y = h;
+    PGE.vScreenSize.x = w;
+    PGE.vScreenSize.y = h;
 
-    for(int i = 0; i < olc_PGE_State.vLayers.size; i++)
+    for(int i = 0; i < PGE.vLayers.size; i++)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, i);
+        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
         olc_SpriteDestroy(ld->pDrawTarget);
-        ld->pDrawTarget = olc_SpriteCreate(olc_PGE_State.vScreenSize.x, olc_PGE_State.vScreenSize.y);
+        ld->pDrawTarget = olc_SpriteCreate(PGE.vScreenSize.x, PGE.vScreenSize.y);
         ld->bUpdate = true;
     }
         
@@ -330,7 +330,7 @@ void SetScreenSize(int w, int h)
     olc_Renderer_ClearBuffer(olc_BLACK, true);
     olc_Renderer_DisplayFrame();
     olc_Renderer_ClearBuffer(olc_BLACK, true);
-    olc_Renderer_UpdateViewport(olc_PGE_State.vViewPos, olc_PGE_State.vViewSize);
+    olc_Renderer_UpdateViewport(PGE.vViewPos, PGE.vViewSize);
 }
 
 // Specify which Sprite should be the target of drawing functions, use NULL
@@ -339,31 +339,31 @@ void SetDrawTarget(olc_Sprite *target)
 {
     if(target == NULL)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, 0);
-        olc_PGE_State.pDrawTarget = ld->pDrawTarget;
-        olc_PGE_State.nTargetLayer = 0;
+        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, 0);
+        PGE.pDrawTarget = ld->pDrawTarget;
+        PGE.nTargetLayer = 0;
     }
     else
     {
-        olc_PGE_State.pDrawTarget = target;
+        PGE.pDrawTarget = target;
     }
 }
 
 // Gets the current Frames Per Second
 uint32_t GetFPS()
-{ return olc_PGE_State.nLastFPS; }
+{ return PGE.nLastFPS; }
 
 // Gets last update of elapsed time
 const float GetElapsedTime()
-{ return olc_PGE_State.fLastElapsed; }
+{ return PGE.fLastElapsed; }
 
 // Gets Actual Window size
 const olc_vi2d GetWindowSize()
-{ return olc_PGE_State.vWindowSize; }
+{ return PGE.vWindowSize; }
 
 // Is system mouse cursor currently visible?
 bool IsMouseCursorVisible()
-{ return olc_PGE_State.bMouseIsVisible; }
+{ return PGE.bMouseIsVisible; }
 
 
 
@@ -373,26 +373,26 @@ bool IsMouseCursorVisible()
 // Layer targeting functions
 void SetLayerDrawTarget(uint8_t layer)
 {
-    olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, layer);
-    olc_PGE_State.pDrawTarget = ld->pDrawTarget;
+    olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
+    PGE.pDrawTarget = ld->pDrawTarget;
     ld->bUpdate = true;
-    olc_PGE_State.nTargetLayer = layer;
+    PGE.nTargetLayer = layer;
 }
 
 void EnableLayer(uint8_t layer, bool b)
 {
-    if(layer < olc_PGE_State.vLayers.size)
+    if(layer < PGE.vLayers.size)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, layer);
+        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
         ld->bShow = b;
     }
 }
 
 void SetLayerOffset(uint8_t layer, float x, float y)
 {
-    if(layer < olc_PGE_State.vLayers.size)
+    if(layer < PGE.vLayers.size)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, layer);
+        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
         ld->vOffset.x = x;
         ld->vOffset.y = y;
     }
@@ -401,9 +401,9 @@ void SetLayerOffset(uint8_t layer, float x, float y)
 
 void SetLayerScale(uint8_t layer, float x, float y)
 {
-    if(layer < olc_PGE_State.vLayers.size)
+    if(layer < PGE.vLayers.size)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, layer);
+        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
         ld->vScale.x = x;
         ld->vScale.y = y;
     }
@@ -411,35 +411,35 @@ void SetLayerScale(uint8_t layer, float x, float y)
 
 void SetLayerTint(uint8_t layer, const olc_Pixel tint)
 {
-    if(layer < olc_PGE_State.vLayers.size)
+    if(layer < PGE.vLayers.size)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&olc_PGE_State.vLayers, layer);
+        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
         ld->tint = tint;
     }
 }
 
 void SetLayerCustomRenderFunction(uint8_t layer, void (*f)())
 {
-    if(layer < olc_PGE_State.vLayers.size)
+    if(layer < PGE.vLayers.size)
     {
-        olc_LayerDesc* ld = vector_get(&olc_PGE_State.vLayers, layer);
+        olc_LayerDesc* ld = vector_get(&PGE.vLayers, layer);
         ld->funcHook = f;
     }
 }
 
 vector GetLayers()
-{ return olc_PGE_State.vLayers; }
+{ return PGE.vLayers; }
 
 uint32_t CreateLayer()
 {
     olc_LayerDesc* ld = (olc_LayerDesc*)malloc(sizeof(olc_LayerDesc));
-    ld->pDrawTarget = olc_SpriteCreate(olc_PGE_State.vScreenSize.x, olc_PGE_State.vScreenSize.y);
-    ld->nResID = olc_Renderer_CreateTexture(olc_PGE_State.vScreenSize.x, olc_PGE_State.vScreenSize.y);
+    ld->pDrawTarget = olc_SpriteCreate(PGE.vScreenSize.x, PGE.vScreenSize.y);
+    ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->funcHook = NULL;
     vector_init(&ld->vecDecalInstance);
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
-    vector_push(&olc_PGE_State.vLayers, ld);
-    return (uint32_t)(olc_PGE_State.vLayers.size - 1);
+    vector_push(&PGE.vLayers, ld);
+    return (uint32_t)(PGE.vLayers.size - 1);
 }
 
 // Change the pixel mode for different optimisations
@@ -447,24 +447,24 @@ uint32_t CreateLayer()
 // olc_PIXELMODE_MASK   = Transparent if alpha is < 255
 // olc_PIXELMODE_ALPHA  = Full transparency
 void SetPixelMode(int32_t m)
-{ olc_PGE_State.nPixelMode = m; }
+{ PGE.nPixelMode = m; }
 
 int32_t GetPixelMode()
-{ return olc_PGE_State.nPixelMode; }
+{ return PGE.nPixelMode; }
 
 // Use a custom blend function
 void SetCustomPixelMode(olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2))
 {
-    olc_PGE_State.funcPixelMode = funcPixelMode;
-    olc_PGE_State.nPixelMode = olc_PIXELMODE_CUSTOM;
+    PGE.funcPixelMode = funcPixelMode;
+    PGE.nPixelMode = olc_PIXELMODE_CUSTOM;
 }
 
 // Change the blend factor form between 0.0f to 1.0f;
 void SetPixelBlend(float fBlend)
 {
-    olc_PGE_State.fFrameTimer = fBlend;
-    if(olc_PGE_State.fBlendFactor < 0.0f) olc_PGE_State.fBlendFactor = 0.0f;
-    if(olc_PGE_State.fBlendFactor > 1.0f) olc_PGE_State.fBlendFactor = 1.0f;
+    PGE.fFrameTimer = fBlend;
+    if(PGE.fBlendFactor < 0.0f) PGE.fBlendFactor = 0.0f;
+    if(PGE.fBlendFactor > 1.0f) PGE.fBlendFactor = 1.0f;
 }
 
 // Offset texels by sub-pixel amount (advanced, do not use)
@@ -476,7 +476,7 @@ void SetSubPixelOffset(float ox, float oy)
 
 // show the system mouse cursor (true: visible, false: invisible)
 void ShowSystemMouseCursor(bool state)
-{ olc_PGE_State.bMouseIsVisible = state; }
+{ PGE.bMouseIsVisible = state; }
 
 
 
@@ -489,50 +489,50 @@ void olc_PGE_UpdateMouse(int32_t x, int32_t y)
 {
     // Mouse coords come in screen space
     // But leave in pixel space
-    olc_PGE_State.bHasMouseFocus = true;
-    olc_PGE_State.vMouseWindowPos.x = x;
-    olc_PGE_State.vMouseWindowPos.y = y;
+    PGE.bHasMouseFocus = true;
+    PGE.vMouseWindowPos.x = x;
+    PGE.vMouseWindowPos.y = y;
 
     // Full Screen mode may have a weird viewport we must clamp to
-    x -= olc_PGE_State.vViewPos.x;
-    y -= olc_PGE_State.vViewPos.y;
+    x -= PGE.vViewPos.x;
+    y -= PGE.vViewPos.y;
 
-    olc_PGE_State.vMousePosCache.x = (int32_t)(((float)x / (float)(olc_PGE_State.vWindowSize.x - (olc_PGE_State.vViewPos.x * 2)) * (float)olc_PGE_State.vScreenSize.x));
-    olc_PGE_State.vMousePosCache.y = (int32_t)(((float)y / (float)(olc_PGE_State.vWindowSize.y - (olc_PGE_State.vViewPos.y * 2)) * (float)olc_PGE_State.vScreenSize.y));
-    if(olc_PGE_State.vMousePosCache.x >= (int32_t)olc_PGE_State.vScreenSize.x)	olc_PGE_State.vMousePosCache.x = olc_PGE_State.vScreenSize.x - 1;
-    if(olc_PGE_State.vMousePosCache.y >= (int32_t)olc_PGE_State.vScreenSize.y)	olc_PGE_State.vMousePosCache.y = olc_PGE_State.vScreenSize.y - 1;
-    if(olc_PGE_State.vMousePosCache.x < 0) olc_PGE_State.vMousePosCache.x = 0;
-    if(olc_PGE_State.vMousePosCache.y < 0) olc_PGE_State.vMousePosCache.y = 0;
+    PGE.vMousePosCache.x = (int32_t)(((float)x / (float)(PGE.vWindowSize.x - (PGE.vViewPos.x * 2)) * (float)PGE.vScreenSize.x));
+    PGE.vMousePosCache.y = (int32_t)(((float)y / (float)(PGE.vWindowSize.y - (PGE.vViewPos.y * 2)) * (float)PGE.vScreenSize.y));
+    if(PGE.vMousePosCache.x >= (int32_t)PGE.vScreenSize.x)	PGE.vMousePosCache.x = PGE.vScreenSize.x - 1;
+    if(PGE.vMousePosCache.y >= (int32_t)PGE.vScreenSize.y)	PGE.vMousePosCache.y = PGE.vScreenSize.y - 1;
+    if(PGE.vMousePosCache.x < 0) PGE.vMousePosCache.x = 0;
+    if(PGE.vMousePosCache.y < 0) PGE.vMousePosCache.y = 0;
 
 }
 
 void olc_PGE_UpdateMouseWheel(int32_t delta)
-{ olc_PGE_State.nMouseWheelDeltaCache += delta; }
+{ PGE.nMouseWheelDeltaCache += delta; }
 
 void olc_PGE_UpdateWindowSize(int32_t x, int32_t y)
 {
-    olc_PGE_State.vWindowSize.x = x;
-    olc_PGE_State.vWindowSize.y = y;
+    PGE.vWindowSize.x = x;
+    PGE.vWindowSize.y = y;
     olc_PGE_UpdateViewport();
 }
 
 void olc_PGE_UpdateViewport()
 {
-    int32_t ww = olc_PGE_State.vScreenSize.x * olc_PGE_State.vPixelSize.x;
-    int32_t wh = olc_PGE_State.vScreenSize.y * olc_PGE_State.vPixelSize.y;
+    int32_t ww = PGE.vScreenSize.x * PGE.vPixelSize.x;
+    int32_t wh = PGE.vScreenSize.y * PGE.vPixelSize.y;
     float wasp = (float)ww / (float)wh;
 
-    olc_PGE_State.vViewSize.x = (int32_t)olc_PGE_State.vWindowSize.x;
-    olc_PGE_State.vViewSize.y = (int32_t)((float)olc_PGE_State.vViewSize.x / wasp);
+    PGE.vViewSize.x = (int32_t)PGE.vWindowSize.x;
+    PGE.vViewSize.y = (int32_t)((float)PGE.vViewSize.x / wasp);
 
-    if(olc_PGE_State.vViewSize.y > olc_PGE_State.vWindowSize.y)
+    if(PGE.vViewSize.y > PGE.vWindowSize.y)
     {
-        olc_PGE_State.vViewSize.y = olc_PGE_State.vWindowSize.y;
-        olc_PGE_State.vViewSize.x = (int32_t)((float)olc_PGE_State.vViewSize.y * wasp);
+        PGE.vViewSize.y = PGE.vWindowSize.y;
+        PGE.vViewSize.x = (int32_t)((float)PGE.vViewSize.y * wasp);
     }
 
-    olc_PGE_State.vViewPos.x = (olc_PGE_State.vWindowSize.x - olc_PGE_State.vViewSize.x) / 2;
-    olc_PGE_State.vViewPos.y = (olc_PGE_State.vWindowSize.y - olc_PGE_State.vViewSize.y) / 2;
+    PGE.vViewPos.x = (PGE.vWindowSize.x - PGE.vViewSize.x) / 2;
+    PGE.vViewPos.y = (PGE.vWindowSize.y - PGE.vViewSize.y) / 2;
 }
 
 void olc_PGE_ConstructFontSheet()
@@ -556,7 +556,7 @@ void olc_PGE_ConstructFontSheet()
     strcat(data, "O`000P08Od400g`<3V=P0G`673IP0`@3>1`00P@6O`P00g`<O`000GP800000000");
     strcat(data, "?P9PL020O`<`N3R0@E4HC7b0@ET<ATB0@@l6C4B0O`H3N7b0?P01L3R000000020");
 
-    olc_PGE_State.fontSprite = olc_SpriteCreate(128, 48);
+    PGE.fontSprite = olc_SpriteCreate(128, 48);
     int px = 0, py = 0;
     for (size_t b = 0; b < 1024; b += 4)
     {
@@ -569,94 +569,94 @@ void olc_PGE_ConstructFontSheet()
         for (int i = 0; i < 24; i++)
         {
             int k = r & (1 << i) ? 255 : 0;
-            olc_Sprite_SetPixel(olc_PGE_State.fontSprite, px, py, olc_PixelRGBA(k, k, k, k));
+            olc_Sprite_SetPixel(PGE.fontSprite, px, py, olc_PixelRGBA(k, k, k, k));
             if (++py == 48) { px++; py = 0; }
         }
     }
 
-    olc_PGE_State.fontDecal = olc_DecalCreate(olc_PGE_State.fontSprite);
+    PGE.fontDecal = olc_DecalCreate(PGE.fontSprite);
 }
 
 void olc_PGE_CoreUpdate()
 {
-    clock_gettime(CLOCK_MONOTONIC, &olc_PGE_State.tp2);
-    double duration = 1000.0*olc_PGE_State.tp2.tv_sec + 1e-6*olc_PGE_State.tp2.tv_nsec - (1000.0*olc_PGE_State.tp1.tv_sec + 1e-6*olc_PGE_State.tp1.tv_nsec);
-    olc_PGE_State.tp1 = olc_PGE_State.tp2;
+    clock_gettime(CLOCK_MONOTONIC, &PGE.tp2);
+    double duration = 1000.0*PGE.tp2.tv_sec + 1e-6*PGE.tp2.tv_nsec - (1000.0*PGE.tp1.tv_sec + 1e-6*PGE.tp1.tv_nsec);
+    PGE.tp1 = PGE.tp2;
 
     float fElapsedTime = (float)(duration / 1000.0f);
-    olc_PGE_State.fLastElapsed = fElapsedTime;
+    PGE.fLastElapsed = fElapsedTime;
 
     olc_Platform_HandleSystemEvent();
 
     // INPUT WRANGLING
     for(int i = 0; i < 256; i++)
     {
-        olc_PGE_State.pKeyboardState[i].bPressed = false;
-        olc_PGE_State.pKeyboardState[i].bReleased = false;
+        PGE.pKeyboardState[i].bPressed = false;
+        PGE.pKeyboardState[i].bReleased = false;
 
-        if(olc_PGE_State.pKeyNewState[i] != !olc_PGE_State.pKeyOldState[i])
+        if(PGE.pKeyNewState[i] != !PGE.pKeyOldState[i])
         {
-            if(olc_PGE_State.pKeyNewState[i])
+            if(PGE.pKeyNewState[i])
             {
-                olc_PGE_State.pKeyboardState[i].bPressed = !olc_PGE_State.pKeyboardState[i].bHeld;
-                olc_PGE_State.pKeyboardState[i].bHeld = true;
+                PGE.pKeyboardState[i].bPressed = !PGE.pKeyboardState[i].bHeld;
+                PGE.pKeyboardState[i].bHeld = true;
             }
             else
             {
-                olc_PGE_State.pKeyboardState[i].bReleased = true;
-                olc_PGE_State.pKeyboardState[i].bHeld = false;
+                PGE.pKeyboardState[i].bReleased = true;
+                PGE.pKeyboardState[i].bHeld = false;
             }
         }
         
-        olc_PGE_State.pKeyOldState[i] = olc_PGE_State.pKeyNewState[i];
+        PGE.pKeyOldState[i] = PGE.pKeyNewState[i];
         
         if(i < olc_nMouseButtons)
         {
-            olc_PGE_State.pMouseState[i].bPressed = false;
-            olc_PGE_State.pMouseState[i].bReleased = false;
+            PGE.pMouseState[i].bPressed = false;
+            PGE.pMouseState[i].bReleased = false;
             
-            if(olc_PGE_State.pMouseNewState[i] != !olc_PGE_State.pMouseOldState[i])
+            if(PGE.pMouseNewState[i] != !PGE.pMouseOldState[i])
             {
-                if(olc_PGE_State.pMouseNewState[i])
+                if(PGE.pMouseNewState[i])
                 {
-                    olc_PGE_State.pMouseState[i].bPressed = !olc_PGE_State.pMouseState[i].bHeld;
-                    olc_PGE_State.pMouseState[i].bHeld = true;
+                    PGE.pMouseState[i].bPressed = !PGE.pMouseState[i].bHeld;
+                    PGE.pMouseState[i].bHeld = true;
                 }
                 else
                 {
-                    olc_PGE_State.pMouseState[i].bReleased = true;
-                    olc_PGE_State.pMouseState[i].bHeld = false;
+                    PGE.pMouseState[i].bReleased = true;
+                    PGE.pMouseState[i].bHeld = false;
                 }
             }
             
-            olc_PGE_State.pMouseOldState[i] = olc_PGE_State.pMouseNewState[i];
+            PGE.pMouseOldState[i] = PGE.pMouseNewState[i];
         }
     }
 
     // Cache mouse coordinates so they remain consistent during frame
-    olc_PGE_State.vMousePos = olc_PGE_State.vMousePosCache;
-    olc_PGE_State.nMouseWheelDelta = olc_PGE_State.nMouseWheelDeltaCache;
-    olc_PGE_State.nMouseWheelDeltaCache = 0;
+    PGE.vMousePos = PGE.vMousePosCache;
+    PGE.nMouseWheelDelta = PGE.nMouseWheelDeltaCache;
+    PGE.nMouseWheelDeltaCache = 0;
 
     olc_Renderer_ClearBuffer(olc_BLACK, true);
 
     // Handle Frame Update
-    if(!olc_PGE_State.OnUserUpdate(fElapsedTime))
-        olc_PGE_State.bActive = false;
+    if(!PGE.OnUserUpdate(fElapsedTime))
+        PGE.bActive = false;
 
     // Display Frame
-    olc_Renderer_UpdateViewport(olc_PGE_State.vViewPos, olc_PGE_State.vViewSize);
+    olc_Renderer_UpdateViewport(PGE.vViewPos, PGE.vViewSize);
     olc_Renderer_ClearBuffer(olc_BLACK, true);
 
     // Layer 0
-    olc_LayerDesc* ld = vector_get(&olc_PGE_State.vLayers, 0);
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
     ld->bUpdate = true;
     ld->bShow = true;
     olc_Renderer_PrepareDrawing();
 
-    for(int i = olc_PGE_State.vLayers.size-1; i >= 1; i--)
+    for(int i = PGE.vLayers.size-1; i >= 1; i--)
     {
-        olc_LayerDesc* layer = vector_get(&olc_PGE_State.vLayers, i);
+        olc_LayerDesc* layer = vector_get(&PGE.vLayers, i);
         if(layer->bShow)
         {
             if(layer->funcHook == NULL)
@@ -692,41 +692,40 @@ void olc_PGE_CoreUpdate()
 void olc_PGE_PrepareEngine()
 {
     // Start OpenGL, the context is owned by the game thread
-    if (olc_Platform_CreateGraphics(olc_PGE_State.bFullScreen, olc_PGE_State.bEnableVSYNC, olc_PGE_State.vViewPos, olc_PGE_State.vViewSize) == olc_RCODE_FAIL) return;
+    if (olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
 
     // Construct default font sheet
     olc_PGE_ConstructFontSheet();
 
     // Initialize Layer Vector
-    vector_init(&olc_PGE_State.vLayers);
+    vector_init(&PGE.vLayers);
     
     // Create Primary Layer "0"
     CreateLayer();
 
-    olc_LayerDesc* ld = vector_get(&olc_PGE_State.vLayers, 0);
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
     ld->bUpdate = true;
     ld->bShow = true;
     SetDrawTarget(NULL);
 
-    clock_gettime(CLOCK_MONOTONIC, &olc_PGE_State.tp1); // POSIX; use timespec_get in C11
-    clock_gettime(CLOCK_MONOTONIC, &olc_PGE_State.tp2);
+    clock_gettime(CLOCK_MONOTONIC, &PGE.tp1); // POSIX; use timespec_get in C11
+    clock_gettime(CLOCK_MONOTONIC, &PGE.tp2);
 }
 
 void olc_PGE_UpdateMouseState(int32_t button, bool state)
-{}
+{ PGE.pMouseNewState[button] = state; }
 
 void olc_PGE_UpdateKeyState(int32_t key, bool state)
-{}
+{ PGE.pKeyNewState[key] = state; }
 
 void olc_PGE_UpdateMouseFocus(bool state)
-{}
+{ PGE.bHasMouseFocus = state; }
 
 void olc_PGE_UpdateKeyFocus(bool state)
-{}
+{ PGE.bHasInputFocus = state; }
 
 void olc_PGE_Terminate()
-{}
-
+{ PGE.bActive = false; }
 
 
 // RENDERER
@@ -774,13 +773,31 @@ void       olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
 // PLATFORM
 
 
-int32_t olc_Platform_ApplicationStartUp();
-int32_t olc_Platform_ApplicationCleanUp();
-int32_t olc_Platform_ThreadStartUp();
-int32_t olc_Platform_ThreadCleanUp();
-int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize);
-int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen);
-int32_t olc_Platform_SetWindowTitle(const char* s);
-int32_t olc_Platform_StartSystemEventLoop();
-int32_t olc_Platform_HandleSystemEvent();
+int32_t olc_Platform_ApplicationStartUp()
+{}
+
+int32_t olc_Platform_ApplicationCleanUp()
+{}
+
+int32_t olc_Platform_ThreadStartUp()
+{}
+
+int32_t olc_Platform_ThreadCleanUp()
+{}
+
+int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize)
+{}
+
+int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen)
+{}
+
+int32_t olc_Platform_SetWindowTitle(const char* s)
+{}
+
+int32_t olc_Platform_StartSystemEventLoop()
+{}
+
+
+int32_t olc_Platform_HandleSystemEvent()
+{}
 

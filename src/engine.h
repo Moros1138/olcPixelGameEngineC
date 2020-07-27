@@ -298,7 +298,7 @@ typedef struct
     bool bActive;
 } olc_PixelGameEngine;
 
-static olc_PixelGameEngine olc_PGE_State;
+static olc_PixelGameEngine PGE;
 
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
     bool full_screen, bool vsync);
