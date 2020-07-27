@@ -1,5 +1,10 @@
 #include "engine.h"
 
+// local utility functions
+void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i++) Draw(i, ny, p); };
+void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }
+bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
+
 // init vector struct
 void vector_init(vector* v)
 {
@@ -339,20 +344,21 @@ olc_Decal* olc_Renderable_GetDecal(olc_Renderable* renderable)
 
 void olc_DefaultState()
 {
-    if(PGE.sAppName == NULL)
-        SetAppName("");
-
     PGE.nPixelMode = olc_PIXELMODE_NORMAL;
     PGE.fBlendFactor = 1.0f;
     PGE.bHasInputFocus = true;
     PGE.bHasMouseFocus = true;
-    PGE.bEnableVSYNC = false;
     PGE.fFrameTimer = 0.0f;
     PGE.fLastElapsed = 0.0f;
     PGE.nFrameCount = 0;
     PGE.nTargetLayer = 0;
     PGE.nLastFPS = 0.0f;
     PGE.bMouseIsVisible = true;
+
+    if(PGE.sAppName == NULL)
+        SetAppName("");
+    
+    sprintf(PGE.sTitle, "OneLoneCoder.com - Pixel Game Engine - %s - FPS: %d", PGE.sAppName, PGE.nFrameCount);
 }
 
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h, bool full_screen, bool vsync)
@@ -388,9 +394,10 @@ int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t p
 
 int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
 {
-    PGE.OnUserCreate = create;
-    PGE.OnUserUpdate = update;
-    PGE.OnUserDestroy = destroy;
+    
+    PGE.OnUserCreate = (create == NULL) ? &DefaultOnUserCreate : create;
+    PGE.OnUserUpdate = (update == NULL) ? &DefaultOnUserUpdate : update;
+    PGE.OnUserDestroy = (destroy == NULL) ? &DefaultOnUserDestroy : destroy;
     
     if(olc_Platform_ApplicationStartUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
     
@@ -422,6 +429,11 @@ int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
 }
 
 #endif
+
+bool DefaultOnUserCreate() { return true; }
+bool DefaultOnUserUpdate(float fElapsedTime) { UNUSED(fElapsedTime); return true; };
+bool DefaultOnUserDestroy() { return true; }
+
 
 void EngineThread()
 {
@@ -599,13 +611,6 @@ bool Draw(int32_t x, int32_t y, olc_Pixel p)
     }
 
     return false;
-}
-
-// rotate the pattern to the left
-bool rol(uint32_t* pattern)
-{
-    *pattern = (*pattern << 1) | (*pattern >> 31);
-    return (*pattern & 1) ? true : false;
 }
 
 // Draws a line from (x1,y1) to (x2,y2)
@@ -1331,7 +1336,6 @@ void olc_Renderer_PrepareDrawing()
 void olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint)
 {
     SDL_Texture* texture = texturemap_get(&mapTextures, nActiveTexture);
-    // printf("DRAW %ld\n", (size_t)texture);
 
     // Apply Tint
     SDL_SetTextureColorMod(texture, tint.r, tint.g, tint.b);
@@ -1590,7 +1594,7 @@ int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const o
 
 int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen)
 {
-    olc_Window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vWindowSize.x, vWindowSize.y, SDL_WINDOW_SHOWN);
+    olc_Window = SDL_CreateWindow(PGE.sTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vWindowSize.x, vWindowSize.y, SDL_WINDOW_SHOWN);
     SDL_SetWindowResizable(olc_Window, SDL_TRUE);
     SDL_SetWindowFullscreen(olc_Window, (bFullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0 );
 
