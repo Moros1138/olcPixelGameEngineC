@@ -1,6 +1,8 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -42,7 +44,7 @@ size_t vector_size(vector* v);
 	#define OLC_GFX_OPENGL10
 #endif
 
-static const uint8_t  olc_nMouseButtons = 5;
+#define olc_nMouseButtons 5
 static const uint8_t  olc_nDefaultAlpha = 0xFF;
 static const uint32_t olc_nDefaultPixel = (olc_nDefaultAlpha << 24);
 
@@ -112,15 +114,20 @@ enum olc_Key
 // | olc::vX2d - A generic 2D vector type                                         |
 // O------------------------------------------------------------------------------O
 
-typedef struct vector2i
+typedef struct
 {
     int x; int y;
 } olc_vi2d;
 
-typedef struct vector2f
+typedef struct
 {
     float x; float y;
 } olc_vf2d;
+
+typedef struct
+{
+    double x; double y;
+} olc_vd2d;
 
 // O------------------------------------------------------------------------------O
 // | olc::HWButton - Represents the state of a hardware button (mouse/key/joy)    |
@@ -159,13 +166,13 @@ typedef struct Sprite
     uint32_t modeSample;
 } olc_Sprite;
 
-olc_Sprite* olc_SpriteCreate(int32_t w, int32_t h);
-olc_Sprite* olc_SpriteLoad(const char *sImageFile);
-void        olc_SpriteDestroy(olc_Sprite* sprite);
+olc_Sprite* olc_Sprite_Create(int32_t w, int32_t h);
+olc_Sprite* olc_Sprite_Load(const char *sImageFile);
+void        olc_Sprite_Destroy(olc_Sprite* sprite);
 
-olc_Sprite* olc_SpriteLoadFromFile(const char *sImageFile);
-olc_Sprite* olc_SpriteLoadFromPGESprFile(const char *sImageFile);
-int32_t   olc_SpriteSaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
+olc_Sprite* olc_Sprite_LoadFromFile(const char *sImageFile);
+olc_Sprite* olc_Sprite_LoadFromPGESprFile(const char *sImageFile);
+int32_t   olc_Sprite_SaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
 
 void      olc_Sprite_SetSampleMode(olc_Sprite* sprite, uint32_t mode);
 olc_Pixel olc_Sprite_GetPixel(olc_Sprite* sprite, int32_t x, int32_t y);
@@ -184,9 +191,9 @@ typedef struct Decal
     olc_vf2d vUVScale;
 } olc_Decal;
 
-olc_Decal* olc_DecalCreate(olc_Sprite* sprite);
-void       olc_DecalDestroy(olc_Decal* decal);
-void       olc_DecalUpdate(olc_Decal* decal);
+olc_Decal* olc_Decal_Create(olc_Sprite* sprite);
+void       olc_Decal_Destroy(olc_Decal* decal);
+void       olc_Decal_Update(olc_Decal* decal);
 
 // O------------------------------------------------------------------------------O
 // | olc::Renderable - Convenience class to keep a sprite and decal together      |
@@ -194,13 +201,13 @@ void       olc_DecalUpdate(olc_Decal* decal);
 typedef struct Renderable
 {
     olc_Sprite* sprite;
-    olc_Decal* decal;
+    olc_Decal*  decal;
 } olc_Renderable;
 
-olc_Renderable* olc_RenderableCreate(uint32_t width, uint32_t height);
-olc_Renderable* olc_RenderableLoad(const char* sFile);
-olc_Sprite*     olc_RenderableGetSprite(olc_Renderable* renderable);
-olc_Decal*      olc_RenderableGetDecal(olc_Renderable* renderable);
+olc_Renderable* olc_Renderable_Create(uint32_t width, uint32_t height);
+olc_Renderable* olc_Renderable_Load(const char* sFile);
+olc_Sprite*     olc_Renderable_GetSprite(olc_Renderable* renderable);
+olc_Decal*      olc_Renderable_GetDecal(olc_Renderable* renderable);
 
 
 // O------------------------------------------------------------------------------O
@@ -247,7 +254,8 @@ typedef struct
 
     // Branding
     char* sAppName;
-    
+    char sTitle[256];
+
     // Inner mysterious workings
     olc_Sprite* pDrawTarget;
     int32_t     nPixelMode;
@@ -298,11 +306,13 @@ typedef struct
     bool bActive;
 } olc_PixelGameEngine;
 
-static olc_PixelGameEngine PGE;
+olc_PixelGameEngine PGE;
+void olc_DefaultState();
 
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
     bool full_screen, bool vsync);
 int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
+void EngineThread();
     
 
 // Hardware Interfaces
@@ -352,8 +362,34 @@ const olc_vi2d GetWindowSize();
 bool IsMouseCursorVisible();
 
 
-// CONFIGURATION ROUTINES
+// DRAWING ROUTINES
 
+
+// Draws a single Pixel
+bool Draw(int32_t x, int32_t y, olc_Pixel p);
+// Draws a line from (x1,y1) to (x2,y2)
+// void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern);
+// // Draws a circle located at (x,y) with radius
+// void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask);
+// // Fills a circle located at (x,y) with radius
+// void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p);
+// // Draws a rectangle at (x,y) to (x+w,y+h)
+// void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
+// // Fills a rectangle at (x,y) to (x+w,y+h)
+// void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
+// // Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+// void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
+// // Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+// void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
+// // Draws an entire sprite at well in my defencelocation (x,y)
+// void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip);
+// // Draws an area of a sprite at location (x,y), where the
+// // selected area is (ox,oy) to (ox+w,oy+h)
+// void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip);
+
+
+// CONFIGURATION ROUTINES
+void SetAppName(const char *title);
 
 // Layer targeting functions
 void SetLayerDrawTarget(uint8_t layer);
@@ -373,7 +409,7 @@ uint32_t CreateLayer();
 void SetPixelMode(int32_t m);
 int32_t GetPixelMode();
 // Use a custom blend function
-void SetCustomPixelMode(olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2));
+void SetCustomPixelMode(olc_Pixel (*f)(int x, int y, olc_Pixel p1, olc_Pixel p2));
 // Change the blend factor form between 0.0f to 1.0f;
 void SetPixelBlend(float fBlend);
 // Offset texels by sub-pixel amount (advanced, do not use)
@@ -401,8 +437,8 @@ void olc_PGE_Terminate();
 #include <SDL2/SDL_keyboard.h>
 #include <SDL2/SDL_image.h>
 
-static SDL_Window*   olc_Window = NULL;
-static SDL_Renderer* olc_Renderer = NULL;
+static SDL_Window*   olc_Window;
+static SDL_Renderer* olc_Renderer;
 static SDL_Rect rViewport;
 typedef struct
 {
@@ -421,7 +457,7 @@ SDL_Texture* texturemap_get(vector* v, int id);
 void texturemap_set(vector* v, int id, SDL_Texture* texture);
 
 void       olc_Renderer_PrepareDevice();
-int32_t    olc_Renderer_CreateDevice(vector params, bool bFullScreen, bool bVSYNC);
+int32_t    olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC);
 int32_t    olc_Renderer_DestroyDevice();
 void       olc_Renderer_DisplayFrame();
 void       olc_Renderer_PrepareDrawing();
@@ -434,6 +470,21 @@ void       olc_Renderer_ApplyTexture(uint32_t id);
 void       olc_Renderer_UpdateViewport(const olc_vi2d pos, const olc_vi2d size);
 void       olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth);
 
+
+typedef struct 
+{
+    size_t key;
+    uint8_t val;
+} inputdata;
+
+static vector mapKeys;
+
+void    inputmap_init(vector *v);
+void    inputmap_destroy(vector* v);
+void    inputmap_delete(vector* v, size_t key);
+uint8_t inputmap_get(vector* v, size_t key);
+void    inputmap_set(vector* v, size_t key, uint8_t val);
+
 int32_t olc_Platform_ApplicationStartUp();
 int32_t olc_Platform_ApplicationCleanUp();
 int32_t olc_Platform_ThreadStartUp();
@@ -443,7 +494,5 @@ int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindo
 int32_t olc_Platform_SetWindowTitle(const char* s);
 int32_t olc_Platform_StartSystemEventLoop();
 int32_t olc_Platform_HandleSystemEvent();
-
-
 
 #endif

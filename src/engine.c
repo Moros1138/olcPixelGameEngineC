@@ -171,7 +171,11 @@ void olc_PixelColourInit()
     olc_WHITE = olc_PixelRGB(255, 255, 255); olc_BLACK = olc_PixelRGB(0, 0, 0);            olc_BLANK = olc_PixelRGBA(0, 0, 0, 0);
 }
 
-olc_Sprite* olc_SpriteCreate(int32_t w, int32_t h)
+// O------------------------------------------------------------------------------O
+// | olc::Sprite - An image represented by a 2D array of olc::Pixel               |
+// O------------------------------------------------------------------------------O
+
+olc_Sprite* olc_Sprite_Create(int32_t w, int32_t h)
 {
     olc_Sprite* sprite;
 
@@ -195,12 +199,12 @@ olc_Sprite* olc_SpriteCreate(int32_t w, int32_t h)
     return sprite;
 }
 
-olc_Sprite* olc_SpriteLoad(const char *sImageFile)
+olc_Sprite* olc_Sprite_Load(const char *sImageFile)
 {
-    return NULL;
+    return olc_Sprite_LoadFromFile(sImageFile);
 }
 
-void olc_SpriteDestroy(olc_Sprite* sprite)
+void olc_Sprite_Destroy(olc_Sprite* sprite)
 {
     free(sprite->pixels);
     sprite->pixels = NULL;
@@ -209,9 +213,8 @@ void olc_SpriteDestroy(olc_Sprite* sprite)
     sprite = NULL;
 }
 
-// olc_Sprite* olc_SpriteLoadFromFile(const char *sImageFile);
 // olc_Sprite* olc_SpriteLoadFromPGESprFile(const char *sImageFile);
-// olc_rcode   olc_SpriteSaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
+// int32_t olc_SpriteSaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
 
 void olc_Sprite_SetSampleMode(olc_Sprite* sprite, uint32_t mode)
 {
@@ -252,6 +255,144 @@ olc_Pixel olc_Sprite_Sample(olc_Sprite* sprite, float x, float y)
 uint32_t* olc_Sprite_GetData(olc_Sprite* sprite)
 {
     return sprite->pixels;
+}
+
+// O------------------------------------------------------------------------------O
+// | olc::Decal - A GPU resident storage of an olc::Sprite                        |
+// O------------------------------------------------------------------------------O
+olc_Decal* olc_Decal_Create(olc_Sprite* sprite)
+{ return NULL; }
+
+void       olc_Decal_Destroy(olc_Decal* decal)
+{}
+
+void       olc_Decal_Update(olc_Decal* decal)
+{}
+
+// O------------------------------------------------------------------------------O
+// | olc::Renderable - Convenience class to keep a sprite and decal together      |
+// O------------------------------------------------------------------------------O
+olc_Renderable* olc_Renderable_Create(uint32_t width, uint32_t height)
+{ return NULL; }
+
+olc_Renderable* olc_Renderable_Load(const char* sFile)
+{ return NULL; }
+
+olc_Sprite* olc_Renderable_GetSprite(olc_Renderable* renderable)
+{ return renderable->sprite; }
+
+olc_Decal* olc_Renderable_GetDecal(olc_Renderable* renderable)
+{ return renderable->decal; }
+
+void olc_DefaultState()
+{
+    SetAppName("");
+    PGE.nPixelMode = olc_PIXELMODE_NORMAL;
+    PGE.fBlendFactor = 1.0f;
+    PGE.bHasInputFocus = true;
+    PGE.bHasMouseFocus = true;
+    PGE.bEnableVSYNC = false;
+    PGE.fFrameTimer = 0.0f;
+    PGE.fLastElapsed = 0.0f;
+    PGE.nFrameCount = 0;
+    PGE.nTargetLayer = 0;
+    PGE.nLastFPS = 0.0f;;
+};
+
+int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h, bool full_screen, bool vsync)
+{
+    PGE.vScreenSize.x = screen_w;
+    PGE.vScreenSize.y = screen_h;
+
+    PGE.vInvScreenSize.x = 1.0f / (float)screen_w;
+    PGE.vInvScreenSize.y = 1.0f / (float)screen_h;
+    
+    PGE.vPixelSize.x = pixel_w;
+    PGE.vPixelSize.y = pixel_h;
+    
+    PGE.vWindowSize.x = PGE.vScreenSize.x * PGE.vPixelSize.x;
+    PGE.vWindowSize.y = PGE.vScreenSize.y * PGE.vPixelSize.y;
+    
+    PGE.bFullScreen = full_screen;
+    PGE.bEnableVSYNC = vsync;
+    
+    PGE.vPixel.x = 2.0f / PGE.vScreenSize.x;
+    PGE.vPixel.y = 2.0f / PGE.vScreenSize.y;
+
+    if(PGE.vPixelSize.x <= 0 || PGE.vPixelSize.y <= 0 || PGE.vScreenSize.x <= 0 || PGE.vScreenSize.y <= 0)
+        return olc_RCODE_FAIL;
+
+    olc_PixelColourInit();
+    olc_DefaultState();
+
+    return olc_RCODE_OK;
+}
+
+#if !defined(PGE_USE_CUSTOM_START)
+
+int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
+{
+    PGE.OnUserCreate = create;
+    PGE.OnUserUpdate = update;
+    PGE.OnUserDestroy = destroy;
+    
+    if(olc_Platform_ApplicationStartUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
+    
+    olc_vi2d vWinPos;
+    
+    vWinPos.x = 30;
+    vWinPos.y = 30;
+
+    // Construct the window
+    if(olc_Platform_CreateWindowPane(vWinPos, PGE.vWindowSize, PGE.bFullScreen) != olc_RCODE_OK) return olc_RCODE_FAIL;
+    olc_PGE_UpdateWindowSize(PGE.vWindowSize.x, PGE.vWindowSize.y);
+
+    // Start the thread
+    PGE.bActive = true;
+    
+    // std::thread t = std::thread(&PixelGameEngine::EngineThread, this);
+    EngineThread();
+
+
+    // Some implementations may form an event loop here
+    olc_Platform_StartSystemEventLoop();
+    
+    // Wait for thread to be exited
+    // t.join();
+
+    if(olc_Platform_ApplicationCleanUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
+
+    return olc_RCODE_OK;
+}
+
+#endif
+
+void EngineThread()
+{
+    // Allow platform to do stuff here if needed, since its now in the
+    // context of this thread
+    if(olc_Platform_ThreadStartUp() == olc_RCODE_FAIL)	return;
+
+    // Do engine context specific initialisation
+    olc_PGE_PrepareEngine();
+
+    // Create user resources as part of this thread
+    if (!PGE.OnUserCreate()) PGE.bActive = false;
+
+    while(PGE.bActive)
+    {
+        // Run as fast as possible
+        while(PGE.bActive)	{ olc_PGE_CoreUpdate();	}
+
+        // Allow the user to free resources if they have overrided the destroy function
+        if (!PGE.OnUserDestroy())
+        {
+            // User denied destroy for some reason, so continue running
+            PGE.bActive = true;
+        }
+    }
+
+    olc_Platform_ThreadCleanUp();
 }
 
 
@@ -320,8 +461,8 @@ void SetScreenSize(int w, int h)
     for(int i = 0; i < PGE.vLayers.size; i++)
     {
         olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
-        olc_SpriteDestroy(ld->pDrawTarget);
-        ld->pDrawTarget = olc_SpriteCreate(PGE.vScreenSize.x, PGE.vScreenSize.y);
+        olc_Sprite_Destroy(ld->pDrawTarget);
+        ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
         ld->bUpdate = true;
     }
         
@@ -366,8 +507,98 @@ bool IsMouseCursorVisible()
 { return PGE.bMouseIsVisible; }
 
 
+// DRAWING ROUTINES
+
+
+// Draws a single Pixel
+bool Draw(int32_t x, int32_t y, olc_Pixel p)
+{
+    if(!PGE.pDrawTarget) return false;
+
+    if(PGE.nPixelMode == olc_PIXELMODE_NORMAL)
+    {
+        return olc_Sprite_SetPixel(PGE.pDrawTarget, x, y, p);
+    }
+
+    if(PGE.nPixelMode == olc_PIXELMODE_MASK)
+    {
+        if(p.a == 255)
+            return olc_Sprite_SetPixel(PGE.pDrawTarget, x, y, p);
+    }
+
+    if(PGE.nPixelMode == olc_PIXELMODE_ALPHA)
+    {
+        olc_Pixel d = olc_Sprite_GetPixel(PGE.pDrawTarget, x, y);
+        float a = (float)(p.a / 255.0f) * PGE.fBlendFactor;
+        float c = 1.0f - a;
+        float r = a * (float)p.r + c * (float)d.r;
+        float g = a * (float)p.g + c * (float)d.g;
+        float b = a * (float)p.b + c * (float)d.b;
+        return olc_Sprite_SetPixel(PGE.pDrawTarget, x, y, olc_PixelRGB((uint8_t)r, (uint8_t)g, (uint8_t)b));
+    }
+
+    if(PGE.nPixelMode == olc_PIXELMODE_CUSTOM)
+    {
+        return olc_Sprite_SetPixel(PGE.pDrawTarget, x, y, PGE.funcPixelMode(x, y, p, olc_Sprite_GetPixel(PGE.pDrawTarget, x, y)));
+    }
+
+    return false;
+}
+
+// Draws a line from (x1,y1) to (x2,y2)
+void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern)
+{}
+
+// Draws a circle located at (x,y) with radius
+void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
+{}
+
+// Fills a circle located at (x,y) with radius
+void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p)
+{}
+
+// Draws a rectangle at (x,y) to (x+w,y+h)
+void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
+{}
+
+// Fills a rectangle at (x,y) to (x+w,y+h)
+void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
+{}
+
+// Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
+{}
+
+// Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
+void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
+{}
+
+// Draws an entire sprite at well in my defencelocation (x,y)
+void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip)
+{}
+
+// Draws an area of a sprite at location (x,y), where the
+// selected area is (ox,oy) to (ox+w,oy+h)
+void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip)
+{}
+
 
 // CONFIGURATION ROUTINES
+void SetAppName(const char* title)
+{
+    if(PGE.sAppName != NULL)
+        free(PGE.sAppName);
+    
+    PGE.sAppName = (char*)calloc(sizeof(char),strlen(title)+1);
+    
+    if(PGE.sAppName == NULL)
+    {
+        fprintf(stderr, "Failed to set sAppName.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    strcpy(PGE.sAppName, title);
+}
 
 
 // Layer targeting functions
@@ -433,12 +664,17 @@ vector GetLayers()
 uint32_t CreateLayer()
 {
     olc_LayerDesc* ld = (olc_LayerDesc*)malloc(sizeof(olc_LayerDesc));
-    ld->pDrawTarget = olc_SpriteCreate(PGE.vScreenSize.x, PGE.vScreenSize.y);
+    
+    ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
+    ld->tint = olc_WHITE;
     ld->funcHook = NULL;
+
     vector_init(&ld->vecDecalInstance);
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
+    
     vector_push(&PGE.vLayers, ld);
+    
     return (uint32_t)(PGE.vLayers.size - 1);
 }
 
@@ -453,9 +689,9 @@ int32_t GetPixelMode()
 { return PGE.nPixelMode; }
 
 // Use a custom blend function
-void SetCustomPixelMode(olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2))
+void SetCustomPixelMode(olc_Pixel (*f)(int x, int y, olc_Pixel p1, olc_Pixel p2))
 {
-    PGE.funcPixelMode = funcPixelMode;
+    PGE.funcPixelMode = f;
     PGE.nPixelMode = olc_PIXELMODE_CUSTOM;
 }
 
@@ -479,12 +715,9 @@ void ShowSystemMouseCursor(bool state)
 { PGE.bMouseIsVisible = state; }
 
 
-
-// DRAWING ROUTINES
-
-
-
 // "Break In" Functions
+
+
 void olc_PGE_UpdateMouse(int32_t x, int32_t y)
 {
     // Mouse coords come in screen space
@@ -556,7 +789,7 @@ void olc_PGE_ConstructFontSheet()
     strcat(data, "O`000P08Od400g`<3V=P0G`673IP0`@3>1`00P@6O`P00g`<O`000GP800000000");
     strcat(data, "?P9PL020O`<`N3R0@E4HC7b0@ET<ATB0@@l6C4B0O`H3N7b0?P01L3R000000020");
 
-    PGE.fontSprite = olc_SpriteCreate(128, 48);
+    PGE.fontSprite = olc_Sprite_Create(128, 48);
     int px = 0, py = 0;
     for (size_t b = 0; b < 1024; b += 4)
     {
@@ -574,7 +807,7 @@ void olc_PGE_ConstructFontSheet()
         }
     }
 
-    PGE.fontDecal = olc_DecalCreate(PGE.fontSprite);
+    PGE.fontDecal = olc_Decal_Create(PGE.fontSprite);
 }
 
 void olc_PGE_CoreUpdate()
@@ -637,12 +870,13 @@ void olc_PGE_CoreUpdate()
     PGE.vMousePos = PGE.vMousePosCache;
     PGE.nMouseWheelDelta = PGE.nMouseWheelDeltaCache;
     PGE.nMouseWheelDeltaCache = 0;
-
+    
     olc_Renderer_ClearBuffer(olc_BLACK, true);
 
     // Handle Frame Update
     if(!PGE.OnUserUpdate(fElapsedTime))
         PGE.bActive = false;
+
 
     // Display Frame
     olc_Renderer_UpdateViewport(PGE.vViewPos, PGE.vViewSize);
@@ -652,9 +886,10 @@ void olc_PGE_CoreUpdate()
     olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
     ld->bUpdate = true;
     ld->bShow = true;
+
     olc_Renderer_PrepareDrawing();
 
-    for(int i = PGE.vLayers.size-1; i >= 1; i--)
+    for(int i = PGE.vLayers.size-1; i >= 0; i--)
     {
         olc_LayerDesc* layer = vector_get(&PGE.vLayers, i);
         if(layer->bShow)
@@ -676,6 +911,7 @@ void olc_PGE_CoreUpdate()
                     olc_DecalInstance* decal = vector_get(&layer->vecDecalInstance, j);
                     olc_Renderer_DrawDecalQuad(decal);
                 }
+
                 // clear the instances
                 vector_clear(&layer->vecDecalInstance);
             }
@@ -687,15 +923,29 @@ void olc_PGE_CoreUpdate()
             
         }
     }
+
+    // Present Graphics to screen
+    olc_Renderer_DisplayFrame();
+
+    // Update Title Bar
+    PGE.fFrameTimer += fElapsedTime;
+    PGE.nFrameCount++;
+    if(PGE.fFrameTimer >= 1.0f)
+    {
+        PGE.nLastFPS = PGE.nFrameCount;
+        PGE.fFrameTimer -= 1.0f;
+
+        sprintf(PGE.sTitle, "OneLoneCoder.com - Pixel Game Engine - %s - FPS: %d", PGE.sAppName, PGE.nFrameCount);
+        olc_Platform_SetWindowTitle(PGE.sTitle);
+        PGE.nFrameCount = 0;
+    }
+
 }
 
 void olc_PGE_PrepareEngine()
 {
     // Start OpenGL, the context is owned by the game thread
-    if (olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
-
-    // Construct default font sheet
-    olc_PGE_ConstructFontSheet();
+    if(olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
 
     // Initialize Layer Vector
     vector_init(&PGE.vLayers);
@@ -708,8 +958,12 @@ void olc_PGE_PrepareEngine()
     ld->bShow = true;
     SetDrawTarget(NULL);
 
+    // Construct default font sheet
+    olc_PGE_ConstructFontSheet();
+
     clock_gettime(CLOCK_MONOTONIC, &PGE.tp1); // POSIX; use timespec_get in C11
     clock_gettime(CLOCK_MONOTONIC, &PGE.tp2);
+
 }
 
 void olc_PGE_UpdateMouseState(int32_t button, bool state)
@@ -799,17 +1053,16 @@ void texturemap_set(vector* v, int id, SDL_Texture* texture)
 
 
 
-void       olc_Renderer_PrepareDevice()
+void olc_Renderer_PrepareDevice()
 {}
 
-int32_t    olc_Renderer_CreateDevice(vector params, bool bFullScreen, bool bVSYNC)
+int32_t olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC)
 {
-    olc_Window   = (SDL_Window*)vector_get(&params, 0);
-    olc_Renderer = (SDL_Renderer*)vector_get(&params, 1);
     texturemap_init(&mapTextures);
+    return olc_RCODE_OK;
 }
 
-int32_t    olc_Renderer_DestroyDevice()
+int32_t olc_Renderer_DestroyDevice()
 {
     for(int i = 0; i < mapTextures.size; i++)
     {
@@ -830,6 +1083,7 @@ void olc_Renderer_PrepareDrawing()
 void olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint)
 {
     SDL_Texture* texture = texturemap_get(&mapTextures, nActiveTexture);
+    // printf("DRAW %ld\n", (size_t)texture);
 
     // Apply Tint
     SDL_SetTextureColorMod(texture, tint.r, tint.g, tint.b);
@@ -938,15 +1192,21 @@ uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
 {
     int id = nTextureID; nTextureID++;
     SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET, width, height);
+    if(texture == NULL)
+    {
+        fprintf(stderr, "Failed to create texture.\n");
+        exit(EXIT_FAILURE);
+    }
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     texturemap_set(&mapTextures, id, texture);
+
     return id;
 }
 
 void olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr)
 {
     SDL_Texture* texture = texturemap_get(&mapTextures, id);
-    SDL_UpdateTexture(texturemap_set, NULL, olc_Sprite_GetData(spr), spr->width * 4);
+    SDL_UpdateTexture(texture, NULL, (void*)olc_Sprite_GetData(spr), spr->width * 4);
 }
 
 uint32_t olc_Renderer_DeleteTexture(const uint32_t id)
@@ -978,31 +1238,289 @@ void olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
 // PLATFORM
 
 
+void inputmap_init(vector* v)
+{
+    vector_init(v);
+}
+
+void inputmap_destroy(vector* v)
+{
+    vector_free(v);
+}
+
+void inputmap_delete(vector* v, size_t key)
+{
+    for(int i = 0; i < v->size; i++)
+    {
+        inputdata* temp = (inputdata*)vector_get(v, i);
+        if(key == temp->key)
+        {
+            vector_remove(v, i);
+            return;
+        }
+    }
+}
+
+uint8_t inputmap_get(vector* v, size_t key)
+{
+    for(int i = 0; i < v->size; i++)
+    {
+        inputdata* temp = (inputdata*)vector_get(v, i);
+        if(key == temp->key)
+            return temp->val;
+    }
+   
+    return 0;
+}
+
+void inputmap_set(vector* v, size_t key, uint8_t val)
+{
+    // check if key already exists
+    for(int i = 0; i < v->size; i++)
+    {
+        inputdata* temp = (inputdata*)vector_get(v, i);
+        if(key == temp->key)
+        {
+            temp->val = val;
+            return;
+        }
+    }
+
+    // if we made it here, we have to create a new inputdata
+    inputdata* temp = (inputdata*)malloc(sizeof(inputdata));
+    if(temp == NULL)
+    {
+        fprintf(stderr, "Failed to allocate memory.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    // set data
+    temp->key = key;
+    temp->val = val;
+
+    // push into vector
+    vector_push(v, temp);    
+}
+
+
+
 int32_t olc_Platform_ApplicationStartUp()
-{}
+{ return olc_RCODE_OK; }
 
 int32_t olc_Platform_ApplicationCleanUp()
-{}
+{
+    SDL_DestroyRenderer(olc_Renderer);
+    SDL_DestroyWindow(olc_Window);
+    SDL_Quit();
+    return olc_RCODE_OK;
+}
 
 int32_t olc_Platform_ThreadStartUp()
-{}
+{ return olc_RCODE_OK; }
 
 int32_t olc_Platform_ThreadCleanUp()
-{}
+{ return olc_RCODE_OK; }
 
 int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize)
-{}
+{
+    int flags = (bEnableVSYNC) ? SDL_RENDERER_PRESENTVSYNC : 0;
+
+    olc_Renderer = SDL_CreateRenderer(olc_Window, -1, SDL_RENDERER_ACCELERATED | flags );
+
+    if(olc_Renderer_CreateDevice(bFullScreen, bEnableVSYNC) == olc_RCODE_OK)
+    {
+        olc_Renderer_UpdateViewport(vViewPos, vViewSize);
+        return olc_RCODE_OK;
+    }
+    else
+    {
+        return olc_RCODE_FAIL;
+    }
+    
+    return olc_RCODE_OK;
+}
 
 int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen)
-{}
+{
+    olc_Window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vWindowSize.x, vWindowSize.y, SDL_WINDOW_SHOWN);
+    SDL_SetWindowResizable(olc_Window, SDL_TRUE);
+    SDL_SetWindowFullscreen(olc_Window, (bFullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0 );
+
+    inputmap_init(&mapKeys);
+    
+    inputmap_set(&mapKeys, SDLK_UNKNOWN, olc_NONE);
+    inputmap_set(&mapKeys, SDLK_a, olc_A); inputmap_set(&mapKeys, SDLK_b, olc_B);
+    inputmap_set(&mapKeys, SDLK_c, olc_C); inputmap_set(&mapKeys, SDLK_d, olc_D);
+    inputmap_set(&mapKeys, SDLK_e, olc_E); inputmap_set(&mapKeys, SDLK_f, olc_F);
+    inputmap_set(&mapKeys, SDLK_g, olc_G); inputmap_set(&mapKeys, SDLK_h, olc_H);
+    inputmap_set(&mapKeys, SDLK_i, olc_I); inputmap_set(&mapKeys, SDLK_j, olc_J);
+    inputmap_set(&mapKeys, SDLK_k, olc_K); inputmap_set(&mapKeys, SDLK_l, olc_L);
+    inputmap_set(&mapKeys, SDLK_m, olc_M); inputmap_set(&mapKeys, SDLK_n, olc_N);
+    inputmap_set(&mapKeys, SDLK_o, olc_O); inputmap_set(&mapKeys, SDLK_p, olc_P);
+    inputmap_set(&mapKeys, SDLK_q, olc_Q); inputmap_set(&mapKeys, SDLK_r, olc_R);
+    inputmap_set(&mapKeys, SDLK_s, olc_S); inputmap_set(&mapKeys, SDLK_t, olc_T);
+    inputmap_set(&mapKeys, SDLK_u, olc_U); inputmap_set(&mapKeys, SDLK_v, olc_V);
+    inputmap_set(&mapKeys, SDLK_w, olc_W); inputmap_set(&mapKeys, SDLK_x, olc_X);
+    inputmap_set(&mapKeys, SDLK_y, olc_Y); inputmap_set(&mapKeys, SDLK_z, olc_Z);
+    
+    inputmap_set(&mapKeys, SDLK_0, olc_K0); inputmap_set(&mapKeys, SDLK_1, olc_K1); 
+    inputmap_set(&mapKeys, SDLK_2, olc_K2); inputmap_set(&mapKeys, SDLK_3, olc_K3);
+    inputmap_set(&mapKeys, SDLK_4, olc_K4); inputmap_set(&mapKeys, SDLK_5, olc_K5); 
+    inputmap_set(&mapKeys, SDLK_6, olc_K6); inputmap_set(&mapKeys, SDLK_7, olc_K7);
+    inputmap_set(&mapKeys, SDLK_8, olc_K8); inputmap_set(&mapKeys, SDLK_9, olc_K9);
+
+    inputmap_set(&mapKeys, SDLK_F1,  olc_F1);  inputmap_set(&mapKeys, SDLK_F2,  olc_F2);
+    inputmap_set(&mapKeys, SDLK_F3,  olc_F3);  inputmap_set(&mapKeys, SDLK_F4,  olc_F4);
+    inputmap_set(&mapKeys, SDLK_F5,  olc_F5);  inputmap_set(&mapKeys, SDLK_F6,  olc_F6);
+    inputmap_set(&mapKeys, SDLK_F7,  olc_F7);  inputmap_set(&mapKeys, SDLK_F8,  olc_F8);
+    inputmap_set(&mapKeys, SDLK_F9,  olc_F9);  inputmap_set(&mapKeys, SDLK_F10, olc_F10);
+    inputmap_set(&mapKeys, SDLK_F11, olc_F11); inputmap_set(&mapKeys, SDLK_F12, olc_F12);
+
+    inputmap_set(&mapKeys, SDLK_DOWN,       olc_DOWN);   inputmap_set(&mapKeys, SDLK_LEFT,   olc_LEFT);
+    inputmap_set(&mapKeys, SDLK_RIGHT,      olc_RIGHT);  inputmap_set(&mapKeys, SDLK_UP,     olc_UP);
+    inputmap_set(&mapKeys, SDLK_KP_ENTER,   olc_ENTER);  inputmap_set(&mapKeys, SDLK_RETURN, olc_ENTER);
+    inputmap_set(&mapKeys, SDLK_BACKSPACE,  olc_BACK);   inputmap_set(&mapKeys, SDLK_ESCAPE, olc_ESCAPE);
+    inputmap_set(&mapKeys, SDLK_RETURN,     olc_ENTER);  inputmap_set(&mapKeys, SDLK_PAUSE,  olc_PAUSE);
+    inputmap_set(&mapKeys, SDLK_SCROLLLOCK, olc_SCROLL); inputmap_set(&mapKeys, SDLK_TAB,    olc_TAB);
+    inputmap_set(&mapKeys, SDLK_DELETE,     olc_DEL);    inputmap_set(&mapKeys, SDLK_HOME,   olc_HOME);
+    inputmap_set(&mapKeys, SDLK_END,        olc_END);    inputmap_set(&mapKeys, SDLK_PAGEUP, olc_PGUP);
+    inputmap_set(&mapKeys, SDLK_PAGEDOWN,   olc_PGDN);   inputmap_set(&mapKeys, SDLK_INSERT, olc_INS);
+    inputmap_set(&mapKeys, SDLK_LSHIFT,     olc_SHIFT);  inputmap_set(&mapKeys, SDLK_RSHIFT, olc_SHIFT);
+    inputmap_set(&mapKeys, SDLK_LCTRL,      olc_CTRL);   inputmap_set(&mapKeys, SDLK_RCTRL,  olc_CTRL);
+    inputmap_set(&mapKeys, SDLK_SPACE,      olc_SPACE);
+
+    inputmap_set(&mapKeys, SDLK_KP_0, olc_NP0); inputmap_set(&mapKeys, SDLK_KP_1, olc_NP1);
+    inputmap_set(&mapKeys, SDLK_KP_2, olc_NP2); inputmap_set(&mapKeys, SDLK_KP_3, olc_NP3);
+    inputmap_set(&mapKeys, SDLK_KP_4, olc_NP4); inputmap_set(&mapKeys, SDLK_KP_5, olc_NP5);
+    inputmap_set(&mapKeys, SDLK_KP_6, olc_NP6); inputmap_set(&mapKeys, SDLK_KP_7, olc_NP7);
+    inputmap_set(&mapKeys, SDLK_KP_8, olc_NP8); inputmap_set(&mapKeys, SDLK_KP_9, olc_NP9);
+
+    inputmap_set(&mapKeys, SDLK_KP_MULTIPLY, olc_NP_MUL); inputmap_set(&mapKeys, SDLK_KP_DIVIDE, olc_NP_DIV);
+    inputmap_set(&mapKeys, SDLK_KP_PLUS, olc_NP_ADD); inputmap_set(&mapKeys, SDLK_KP_MINUS, olc_NP_SUB);
+    inputmap_set(&mapKeys, SDLK_KP_PERIOD, olc_NP_DECIMAL); inputmap_set(&mapKeys, SDLK_PERIOD, olc_PERIOD);
+
+    return olc_RCODE_OK;
+}
 
 int32_t olc_Platform_SetWindowTitle(const char* s)
-{}
+{
+    SDL_SetWindowTitle(olc_Window, s);
+    return olc_RCODE_OK;
+}
 
 int32_t olc_Platform_StartSystemEventLoop()
-{}
+{ return olc_RCODE_OK; }
 
 
 int32_t olc_Platform_HandleSystemEvent()
-{}
+{
+    if(IsMouseCursorVisible())
+        SDL_ShowCursor(SDL_ENABLE);
+    else
+        SDL_ShowCursor(SDL_DISABLE);
+        
+    SDL_Event event;
+    
+    while(SDL_PollEvent(&event) != 0)
+    {
+        if(event.type == SDL_WINDOWEVENT)
+        {
+            if(event.window.event == SDL_WINDOWEVENT_RESIZED)
+            {
+                olc_PGE_UpdateWindowSize(event.window.data1, event.window.data2);
+            }
+            else if(event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+            {
+                olc_PGE_UpdateKeyFocus(true);
+            }
+            else if(event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+            {
+                olc_PGE_UpdateKeyFocus(false);
+            }
+        }
+        else if(event.type == SDL_KEYDOWN)
+        {
+            olc_PGE_UpdateKeyState(inputmap_get(&mapKeys, event.key.keysym.sym), true);
+        }
+        else if(event.type == SDL_KEYUP)
+        {
+            olc_PGE_UpdateKeyState(inputmap_get(&mapKeys, event.key.keysym.sym), false);
+        }
+        else if(event.type == SDL_MOUSEBUTTONDOWN)
+        {
+            switch(event.button.button)
+            {
+                case SDL_BUTTON_LEFT:   olc_PGE_UpdateMouseState(0, true);	break;
+                case SDL_BUTTON_RIGHT:  olc_PGE_UpdateMouseState(1, true);	break;
+                case SDL_BUTTON_MIDDLE: olc_PGE_UpdateMouseState(2, true);	break;
+            }
+        }
+        else if(event.type == SDL_MOUSEBUTTONUP)
+        {
+            switch(event.button.button)
+            {
+                case SDL_BUTTON_LEFT:   olc_PGE_UpdateMouseState(0, false);	break;
+                case SDL_BUTTON_RIGHT:  olc_PGE_UpdateMouseState(1, false);	break;
+                case SDL_BUTTON_MIDDLE: olc_PGE_UpdateMouseState(2, false);	break;
+            }
+        }
+        else if(event.type == SDL_MOUSEWHEEL)
+        {
+            if(event.wheel.y < 0)
+            {
+                olc_PGE_UpdateMouseWheel(120);
+            }
+            else
+            {
+                olc_PGE_UpdateMouseWheel(-120);
+            }
+        }
+        else if(event.type == SDL_MOUSEMOTION)
+        {
+            olc_PGE_UpdateMouse(event.motion.x, event.motion.y);
+        }
+        else if (event.type == SDL_QUIT)
+        {
+            olc_PGE_Terminate();
+        }
+    }
+    
+    return olc_RCODE_OK;
+}
+
+olc_Sprite* olc_Sprite_LoadFromFile(const char* filename)
+{
+    SDL_Surface* temp = IMG_Load(filename);
+    
+    if(temp == NULL)
+    {
+        fprintf(stderr, "%s failed to load.", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    SDL_Surface* image = SDL_ConvertSurfaceFormat(temp, SDL_PIXELFORMAT_ABGR8888, 0);
+
+    uint32_t* pixels = (uint32_t*)image->pixels;
+
+    olc_Sprite* sprite = olc_Sprite_Create(image->w, image->h);
+    
+    for(int y = 0; y < image->h; y++)
+    {
+        for(int x = 0; x < image->w; x++)
+        {
+            olc_Pixel p = olc_PixelRAW(pixels[y * image->w + x]);
+            
+            // obey intent of the alpha channel
+            if(p.a == 0)
+                p.n = 0;
+
+            olc_Sprite_SetPixel(sprite, x, y, p);
+        }
+    }
+
+    SDL_FreeSurface(image);
+    SDL_FreeSurface(temp);
+
+    return sprite;
+}
 
