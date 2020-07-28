@@ -1,5 +1,16 @@
 #include "engine.h"
 
+olc_Pixel olc_GREY, olc_DARK_GREY, olc_VERY_DARK_GREY,
+    olc_RED,     olc_DARK_RED,     olc_VERY_DARK_RED,
+    olc_YELLOW,  olc_DARK_YELLOW,  olc_VERY_DARK_YELLOW,
+    olc_GREEN,   olc_DARK_GREEN,   olc_VERY_DARK_GREEN,
+    olc_CYAN,    olc_DARK_CYAN,    olc_VERY_DARK_CYAN,
+    olc_BLUE,    olc_DARK_BLUE,    olc_VERY_DARK_BLUE,
+    olc_MAGENTA, olc_DARK_MAGENTA, olc_VERY_DARK_MAGENTA,
+    olc_WHITE,   olc_BLACK, olc_BLANK;
+
+olc_PixelGameEngine PGE;
+
 // local utility functions
 void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i++) Draw(i, ny, p); };
 void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }

@@ -85,7 +85,9 @@ void olc_PixelColourInit();
 // O------------------------------------------------------------------------------O
 // | USEFUL CONSTANTS / AND SOME JUST STATIC ONES                                 |
 // O------------------------------------------------------------------------------O
-olc_Pixel olc_GREY, olc_DARK_GREY, olc_VERY_DARK_GREY,
+
+// EXTERN!!! Thanks Gusgo
+extern olc_Pixel olc_GREY, olc_DARK_GREY, olc_VERY_DARK_GREY,
     olc_RED,     olc_DARK_RED,     olc_VERY_DARK_RED,
     olc_YELLOW,  olc_DARK_YELLOW,  olc_VERY_DARK_YELLOW,
     olc_GREEN,   olc_DARK_GREEN,   olc_VERY_DARK_GREEN,
@@ -319,7 +321,8 @@ typedef struct
     bool bActive;
 } olc_PixelGameEngine;
 
-olc_PixelGameEngine PGE;
+// EXTERN!!! Thanks Gusgo
+extern olc_PixelGameEngine PGE;
 void olc_DefaultState();
 
 int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
