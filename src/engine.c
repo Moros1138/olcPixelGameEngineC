@@ -391,11 +391,11 @@ olc_DecalInstance* olc_DecalInstance_Create()
 
     di->decal = NULL;
 
-    di->pos[0] = olc_V2D(0.0f, 0.0f); di->pos[1] = olc_V2D(0.0f, 0.0f);
-    di->pos[2] = olc_V2D(0.0f, 0.0f); di->pos[3] = olc_V2D(0.0f, 0.0f);
+    di->pos[0] = olc_VF2D(0.0f, 0.0f); di->pos[1] = olc_VF2D(0.0f, 0.0f);
+    di->pos[2] = olc_VF2D(0.0f, 0.0f); di->pos[3] = olc_VF2D(0.0f, 0.0f);
 
-    di->uv[0] = olc_V2D(0.0f, 0.0f); di->uv[1] = olc_V2D(0.0f, 1.0f);
-    di->uv[2] = olc_V2D(1.0f, 1.0f); di->uv[3] = olc_V2D(1.0f, 0.0f);
+    di->uv[0] = olc_VF2D(0.0f, 0.0f); di->uv[1] = olc_VF2D(0.0f, 1.0f);
+    di->uv[2] = olc_VF2D(1.0f, 1.0f); di->uv[3] = olc_VF2D(1.0f, 0.0f);
 
     di->w[0] = di->w[1] = di->w[2] = di->w[3] = 1.0f;
     di->tint[0] = di->tint[1] = di->tint[2] = di->tint[3] = olc_WHITE;
@@ -1675,7 +1675,6 @@ void olc_PGE_CoreUpdate()
         olc_Platform_SetWindowTitle(PGE.sTitle);
         PGE.nFrameCount = 0;
     }
-
 }
 
 void olc_PGE_PrepareEngine()

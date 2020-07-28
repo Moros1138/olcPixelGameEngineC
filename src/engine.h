@@ -1,6 +1,10 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
@@ -44,9 +48,8 @@ size_t vector_size(vector* v);
 #endif
 
 #define olc_nMouseButtons 5
-static const uint8_t  olc_nDefaultAlpha = 0xFF;
-static const uint32_t olc_nDefaultPixel = (olc_nDefaultAlpha << 24);
-
+#define olc_nDefaultAlpha 0xFF
+#define olc_nDefaultPixel (olc_nDefaultAlpha << 24)
 
 #define olc_SOLID 0xffffffff
 
@@ -133,14 +136,6 @@ typedef struct
 olc_vi2d olc_VI2D(int x, int y);
 olc_vf2d olc_VF2D(float x, float y);
 olc_vd2d olc_VD2D(double x, double y);
-
-
-#define olc_V2D(x, y) _Generic(x, \
-int: olc_VI2D, \
-float: olc_VF2D, \
-double: olc_VD2D \
-)(x, y)
-
 
 // O------------------------------------------------------------------------------O
 // | olc_HWButton - Represents the state of a hardware button (mouse/key/joy)     |
