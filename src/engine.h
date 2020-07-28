@@ -1,7 +1,6 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
@@ -61,13 +60,10 @@ enum olc_rcode
 // O------------------------------------------------------------------------------O
 // | olc_Pixel - Represents a 32-Bit RGBA colour                                  |
 // O------------------------------------------------------------------------------O
-typedef struct Pixel
+typedef union Pixel
 {
-    union
-    {
-        uint32_t n;
-        struct { uint8_t r; uint8_t g; uint8_t b; uint8_t a; };
-    };
+    uint32_t n;
+    struct { uint8_t r; uint8_t g; uint8_t b; uint8_t a; };
 } olc_Pixel;
 
 enum olc_PixelMode
@@ -131,6 +127,18 @@ typedef struct
 {
     double x; double y;
 } olc_vd2d;
+
+olc_vi2d olc_VI2D(int x, int y);
+olc_vf2d olc_VF2D(float x, float y);
+olc_vd2d olc_VD2D(double x, double y);
+
+
+#define olc_V2D(x, y) _Generic(x, \
+int: olc_VI2D, \
+float: olc_VF2D, \
+double: olc_VD2D \
+)(x, y)
+
 
 // O------------------------------------------------------------------------------O
 // | olc_HWButton - Represents the state of a hardware button (mouse/key/joy)     |
@@ -225,6 +233,8 @@ typedef struct DecalInstance
     float w[4];
     olc_Pixel tint[4];
 } olc_DecalInstance;
+
+olc_DecalInstance* olc_DecalInstance_Create();
 
 typedef struct DecalTriangleInstance
 {
@@ -398,24 +408,24 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
 // Decal Quad functions
 
 // Draws a whole decal, with optional scale and tinting
-void DrawDecal(const olc_vf2d pos, olc_Decal *decal, const olc_vf2d scale, const olc_Pixel tint);
+void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint);
 // Draws a region of a decal, with optional scale and tinting
-void DrawPartialDecal(const olc_vf2d pos, olc_Decal* decal, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint);
+void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
-void DrawExplicitDecal(olc_Decal* decal, const olc_vf2d *pos, const olc_vf2d *uv, const olc_Pixel *col);
+void DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col);
 // Draws a decal with 4 arbitrary points, warping the texture to look "correct"
-void DrawWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_Pixel tint);
+void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint);
 // As above, but you can specify a region of a decal source sprite
-void DrawPartialWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_vf2d source_pos, const olc_vf2d source_size, const olc_Pixel tint);
+void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint);
 // Draws a decal rotated to specified angle, wit point of rotation offset
-void DrawRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d scale, const olc_Pixel tint);
-void DrawPartialRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint);
+void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint);
+void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
 // Draws a multiline string as a decal, with tiniting and scaling
-void DrawStringDecal(const olc_vf2d pos, const char* sText, const olc_Pixel col, const olc_vf2d scale);
+void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale);
 // Draws a single shaded filled rectangle as a decal
-void FillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel col);
+void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col);
 // Draws a corner shaded rectangle as a decal
-void GradientFillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
+void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
 
 
 // Draws a single line of text
@@ -500,7 +510,7 @@ int32_t    olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC);
 int32_t    olc_Renderer_DestroyDevice();
 void       olc_Renderer_DisplayFrame();
 void       olc_Renderer_PrepareDrawing();
-void       olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint);
+void       olc_Renderer_DrawLayerQuad(olc_vf2d offset, olc_vf2d scale, const olc_Pixel tint);
 void       olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal);
 uint32_t   olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height);
 void       olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr);

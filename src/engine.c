@@ -166,7 +166,7 @@ bool olc_PixelCompare(olc_Pixel a, olc_Pixel b)
 
 void olc_PixelColourInit()
 {
-    olc_GREY = olc_PixelRGB(192, 192, 192); olc_DARK_GREY = olc_PixelRGB(128, 128, 128); olc_VERY_DARK_GREY = olc_PixelRGB(64, 64, 64);
+    olc_GREY = olc_PixelRGB(192, 192, 192);  olc_DARK_GREY = olc_PixelRGB(128, 128, 128);  olc_VERY_DARK_GREY = olc_PixelRGB(64, 64, 64);
     olc_RED = olc_PixelRGB(255, 0, 0);       olc_DARK_RED = olc_PixelRGB(128, 0, 0);       olc_VERY_DARK_RED = olc_PixelRGB(64, 0, 0);
     olc_YELLOW = olc_PixelRGB(255, 255, 0);  olc_DARK_YELLOW = olc_PixelRGB(128, 128, 0);  olc_VERY_DARK_YELLOW = olc_PixelRGB(64, 64, 0);
     olc_GREEN = olc_PixelRGB(0, 255, 0);     olc_DARK_GREEN = olc_PixelRGB(0, 128, 0);     olc_VERY_DARK_GREEN = olc_PixelRGB(0, 64, 0);
@@ -175,6 +175,15 @@ void olc_PixelColourInit()
     olc_MAGENTA = olc_PixelRGB(255, 0, 255); olc_DARK_MAGENTA = olc_PixelRGB(128, 0, 128); olc_VERY_DARK_MAGENTA = olc_PixelRGB(64, 0, 64);
     olc_WHITE = olc_PixelRGB(255, 255, 255); olc_BLACK = olc_PixelRGB(0, 0, 0);            olc_BLANK = olc_PixelRGBA(0, 0, 0, 0);
 }
+
+// O------------------------------------------------------------------------------O
+// | olc_vX2d - A generic 2D vector type                                          |
+// O------------------------------------------------------------------------------O
+
+olc_vi2d olc_VI2D(int x, int y) { olc_vi2d ret; ret.x = x; ret.y = y; return ret; }
+olc_vf2d olc_VF2D(float x, float y) { olc_vf2d ret; ret.x = x; ret.y = y; return ret; }
+olc_vd2d olc_VD2D(double x, double y) { olc_vd2d ret; ret.x = x; ret.y = y; return ret; }
+
 
 // O------------------------------------------------------------------------------O
 // | olc::Sprite - An image represented by a 2D array of olc::Pixel               |
@@ -193,11 +202,12 @@ olc_Sprite* olc_Sprite_Create(int32_t w, int32_t h)
 
     sprite->width = w;
     sprite->height = h;
-    sprite->pixels = (unsigned int*)calloc(sizeof(uint32_t), w * h);
-    
+    sprite->pixels = (uint32_t*)calloc(sizeof(uint32_t), w * h);
+    sprite->modeSample = olc_SPRITEMODE_NORMAL; // Good Catch! Thanks Tarry
+
     if(sprite->pixels == NULL)
     {
-        fprintf(stderr, "Failed to allcoate ram for sprite pixel data.\n");
+        fprintf(stderr, "Failed to allocate ram for sprite pixel data.\n"); // Gusgo Spellcheck PRO+, coming to Google soon!
         exit(EXIT_FAILURE);
     }
 
@@ -249,9 +259,15 @@ bool olc_Sprite_SetPixel(olc_Sprite* sprite, int32_t x, int32_t y, olc_Pixel p)
 
 olc_Pixel olc_Sprite_Sample(olc_Sprite* sprite, float x, float y)
 {
-    // int32_t sx = min((int32_t)((x * (float)sprite->width)), sprite->width - 1);
-    // int32_t sy = min((int32_t)((y * (float)sprite->height)), sprite->height - 1);
-    int32_t sx, sy;
+    int32_t a, b;
+    
+    a = (int32_t)((x * (float)sprite->width));
+    b = sprite->width - 1;
+    int32_t sx = (a < b) ? a : b;
+    
+    a = (int32_t)((y * (float)sprite->height));
+    b = sprite->height - 1;
+    int32_t sy = (a < b) ? a : b;
 
     return olc_Sprite_GetPixel(sprite, sx, sy);
 }
@@ -278,6 +294,7 @@ olc_Decal* olc_Decal_Create(olc_Sprite* sprite)
 
     decal->id = -1;
     decal->sprite = sprite;
+    decal->vUVScale = olc_VF2D( 1.0f, 1.0f );
     decal->id = olc_Renderer_CreateTexture(decal->sprite->width, decal->sprite->height);
     olc_Decal_Update(decal);
     
@@ -296,9 +313,7 @@ void olc_Decal_Destroy(olc_Decal* decal)
 void olc_Decal_Update(olc_Decal* decal)
 {
     if(decal->sprite == NULL) return;
-    
-    decal->vUVScale.x = 1.0f / (float)decal->sprite->width;
-    decal->vUVScale.y = 1.0f / (float)decal->sprite->height;
+    decal->vUVScale = olc_VF2D( 1.0f / (float)(decal->sprite->width), 1.0f / (float)(decal->sprite->height) );
     olc_Renderer_ApplyTexture(decal->id);
     olc_Renderer_UpdateTexture(decal->id, decal->sprite);
 }
@@ -337,10 +352,45 @@ olc_Renderable* olc_Renderable_Load(const char* sFile)
 }
 
 olc_Sprite* olc_Renderable_GetSprite(olc_Renderable* renderable)
-{ return renderable->sprite; }
+{
+#ifdef PUNISH_MODE
+    for(volatile int i = 0; i < 1000; i++)
+    { UNUSED(i); }
+#endif
+    return renderable->sprite;
+}
 
 olc_Decal* olc_Renderable_GetDecal(olc_Renderable* renderable)
-{ return renderable->decal; }
+{
+#ifdef PUNISH_MODE
+    for(volatile int i = 0; i < 1000; i++)
+    { UNUSED(i); }
+#endif
+    return renderable->decal;
+}
+
+olc_DecalInstance* olc_DecalInstance_Create()
+{
+    olc_DecalInstance* di = (olc_DecalInstance*)malloc(sizeof(olc_DecalInstance));
+    if(di == NULL)
+    {
+        fprintf(stderr, "Error create Decal Instance.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    di->decal = NULL;
+
+    di->pos[0] = olc_V2D(0.0f, 0.0f); di->pos[1] = olc_V2D(0.0f, 0.0f);
+    di->pos[2] = olc_V2D(0.0f, 0.0f); di->pos[3] = olc_V2D(0.0f, 0.0f);
+
+    di->uv[0] = olc_V2D(0.0f, 0.0f); di->uv[1] = olc_V2D(0.0f, 1.0f);
+    di->uv[2] = olc_V2D(1.0f, 1.0f); di->uv[3] = olc_V2D(1.0f, 0.0f);
+
+    di->w[0] = di->w[1] = di->w[2] = di->w[3] = 1.0f;
+    di->tint[0] = di->tint[1] = di->tint[2] = di->tint[3] = olc_WHITE;
+
+    return di;
+}
 
 void olc_DefaultState()
 {
@@ -1013,42 +1063,177 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
 // Decal Quad functions
 
 // Draws a whole decal, with optional scale and tinting
-void DrawDecal(const olc_vf2d pos, olc_Decal *decal, const olc_vf2d scale, const olc_Pixel tint)
-{}
+void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint)
+{
+    olc_vf2d vScreenSpacePos;
+    vScreenSpacePos.x = (pos.x * PGE.vInvScreenSize.x) * 2.0f - 1.0f;
+    vScreenSpacePos.y = ((pos.y * PGE.vInvScreenSize.y) * 2.0f - 1.0f) * -1.0f;
+    
+    olc_vf2d vScreenSpaceDim;
+    vScreenSpaceDim.x = vScreenSpacePos.x + (2.0f * ((float)(decal->sprite->width) * PGE.vInvScreenSize.x)) * scale.x;
+    vScreenSpaceDim.y = vScreenSpacePos.y - (2.0f * ((float)(decal->sprite->height) * PGE.vInvScreenSize.y)) * scale.y;
+
+    olc_DecalInstance* di = olc_DecalInstance_Create();
+    
+    di->decal = decal;
+    
+    di->tint[0] = tint;
+    
+    di->pos[0] = olc_VF2D( vScreenSpacePos.x, vScreenSpacePos.y );
+    di->pos[1] = olc_VF2D( vScreenSpacePos.x, vScreenSpaceDim.y );
+    di->pos[2] = olc_VF2D( vScreenSpaceDim.x, vScreenSpaceDim.y );
+    di->pos[3] = olc_VF2D( vScreenSpaceDim.x, vScreenSpacePos.y );
+
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    if(ld != NULL)
+        vector_push(&ld->vecDecalInstance, di);
+    
+}
 
 // Draws a region of a decal, with optional scale and tinting
-void DrawPartialDecal(const olc_vf2d pos, olc_Decal* decal, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint)
-{}
+void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
+{
+    olc_vf2d vScreenSpacePos = olc_VF2D(
+        (pos.x * PGE.vInvScreenSize.x) * 2.0f - 1.0f,
+        ((pos.y * PGE.vInvScreenSize.y) * 2.0f - 1.0f) * -1.0f
+    );
+    
+    olc_vf2d vScreenSpaceDim = olc_VF2D(
+        vScreenSpacePos.x + (2.0f * source_size.x * PGE.vInvScreenSize.x) * scale.x,
+        vScreenSpacePos.y - (2.0f * source_size.y * PGE.vInvScreenSize.y) * scale.y
+    );
+
+    olc_DecalInstance* di = olc_DecalInstance_Create();
+
+    di->decal = decal; di->tint[0] = tint;
+
+    di->pos[0] = olc_VF2D( vScreenSpacePos.x, vScreenSpacePos.y );
+    di->pos[1] = olc_VF2D( vScreenSpacePos.x, vScreenSpaceDim.y );
+    di->pos[2] = olc_VF2D( vScreenSpaceDim.x, vScreenSpaceDim.y );
+    di->pos[3] = olc_VF2D( vScreenSpaceDim.x, vScreenSpacePos.y );
+    
+    olc_vf2d uvtl = olc_VF2D(source_pos.x * decal->vUVScale.x, source_pos.y * decal->vUVScale.y);
+    olc_vf2d uvbr = olc_VF2D(uvtl.x + (source_size.x * decal->vUVScale.x), uvtl.y + (source_size.y * decal->vUVScale.y));
+    
+    di->uv[0] = olc_VF2D( uvtl.x, uvtl.y ); di->uv[1] = olc_VF2D( uvtl.x, uvbr.y );
+    di->uv[2] = olc_VF2D( uvbr.x, uvbr.y ); di->uv[3] = olc_VF2D( uvbr.x, uvtl.y );	
+
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    if(ld != NULL)
+        vector_push(&ld->vecDecalInstance, di);
+}
 
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
-void DrawExplicitDecal(olc_Decal* decal, const olc_vf2d *pos, const olc_vf2d *uv, const olc_Pixel *col)
+void DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col)
 {}
 
 // Draws a decal with 4 arbitrary points, warping the texture to look "correct"
-void DrawWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_Pixel tint)
+void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint)
 {}
 
 // As above, but you can specify a region of a decal source sprite
-void DrawPartialWarpedDecal(olc_Decal* decal, const olc_vf2d pos[4], const olc_vf2d source_pos, const olc_vf2d source_size, const olc_Pixel tint)
+void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint)
 {}
 
 // Draws a decal rotated to specified angle, wit point of rotation offset
-void DrawRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d scale, const olc_Pixel tint)
-{}
+void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
+{
+    olc_DecalInstance* di = olc_DecalInstance_Create();
 
-void DrawPartialRotatedDecal(const olc_vf2d pos, olc_Decal* decal, const float fAngle, const olc_vf2d center, const olc_vf2d source_pos, const olc_vf2d source_size, const olc_vf2d scale, const olc_Pixel tint)
-{}
+    di->decal = decal; di->tint[0] = tint;
+
+    di->pos[0] = olc_VF2D((0.0f - center.x) * scale.x,(0.0f - center.y) * scale.y);
+    di->pos[1] = olc_VF2D((0.0f - center.x) * scale.x, ((float)decal->sprite->height - center.y) * scale.y);
+    di->pos[2] = olc_VF2D(((float)decal->sprite->width - center.x) * scale.x, ((float)decal->sprite->height - center.y) * scale.y);
+    di->pos[3] = olc_VF2D(((float)decal->sprite->width - center.x) * scale.x, (0.0f - center.y) * scale.y);
+    
+    float c = cos(fAngle), s = sin(fAngle);
+
+    for (int i = 0; i < 4; i++)
+    {
+        di->pos[i] = olc_VF2D(pos.x + (di->pos[i].x * c - di->pos[i].y * s), pos.y + (di->pos[i].x * s + di->pos[i].y * c));
+        di->pos[i] = olc_VF2D(di->pos[i].x * PGE.vInvScreenSize.x * 2.0f - 1.0f, di->pos[i].y * PGE.vInvScreenSize.y * 2.0f - 1.0f);
+        di->pos[i].y *= -1.0f;
+    }
+
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    if(ld != NULL)
+        vector_push(&ld->vecDecalInstance, di);
+}
+
+void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
+{
+    olc_DecalInstance* di = olc_DecalInstance_Create();
+
+    di->decal = decal; di->tint[0] = tint;
+
+    di->pos[0] = olc_VF2D((0.0f - center.x) * scale.x, (0.0f - center.y) * scale.y);
+    di->pos[1] = olc_VF2D((0.0f - center .x) * scale.x, (source_size.x - center.y) * scale.y);
+    di->pos[2] = olc_VF2D((source_size.x - center.x) * scale.x, (source_size.y - center.y) * scale.y);
+    di->pos[3] = olc_VF2D((source_size.x - center.x) * scale.x, (0.0f - center.y) * scale.y);
+
+    float c = cos(fAngle), s = sin(fAngle);
+    for (int i = 0; i < 4; i++)
+    {
+        di->pos[i] = olc_VF2D(pos.x + (di->pos[i].x * c - di->pos[i].y * s), pos.y + (di->pos[i].x * s + di->pos[i].y * c));
+        di->pos[i] = olc_VF2D(di->pos[i].x * PGE.vInvScreenSize.x * 2.0f - 1.0f, di->pos[i].y * PGE.vInvScreenSize.y * 2.0f - 1.0f);
+        di->pos[i].y *= -1.0f;
+    }
+
+    olc_vf2d uvtl = olc_VF2D(source_pos.x * decal->vUVScale.x, source_pos.y * decal->vUVScale.y);
+    olc_vf2d uvbr = olc_VF2D(uvtl.x + (source_size.x * decal->vUVScale.x), uvtl.y + (source_size.y * decal->vUVScale.y));
+    
+    di->uv[0] = olc_VF2D( uvtl.x, uvtl.y ); di->uv[1] = olc_VF2D( uvtl.x, uvbr.y );
+    di->uv[2] = olc_VF2D( uvbr.x, uvbr.y ); di->uv[3] = olc_VF2D( uvbr.x, uvtl.y );	
+
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    if(ld != NULL)
+        vector_push(&ld->vecDecalInstance, di);
+}
 
 // Draws a multiline string as a decal, with tiniting and scaling
-void DrawStringDecal(const olc_vf2d pos, const char* sText, const olc_Pixel col, const olc_vf2d scale)
-{}
+void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale)
+{
+    olc_vf2d spos;
+    
+    spos.x = 0.0f;
+    spos.y = 0.0f;
+    
+    for(int i = 0; i < strlen(sText); i++)
+    {
+        char c = sText[i];
+        if (c == '\n')
+        {
+            spos.x = 0; spos.y += 8.0f * scale.y;
+        }
+        else
+        {
+            int32_t ox = (c - 32) % 16;
+            int32_t oy = (c - 32) / 16;
+            
+            olc_vf2d p, src, src_size;
+            
+            p.x = pos.x + spos.x;
+            p.y = pos.y + spos.y;
+
+            src.x = (float)ox * 8.0f;
+            src.y = (float)oy * 8.0f;
+
+            src_size.x = 8.0f;
+            src_size.y = 8.0f;
+
+            DrawPartialDecal(p, PGE.fontDecal, src, src_size, scale, col);
+            spos.x += 8.0f * scale.x;
+        }
+    }
+}
 
 // Draws a single shaded filled rectangle as a decal
-void FillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel col)
+void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col)
 {}
 
 // Draws a corner shaded rectangle as a decal
-void GradientFillRectDecal(const olc_vf2d pos, const olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR)
+void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR)
 {}
 
 
@@ -1310,24 +1495,24 @@ void olc_PGE_UpdateViewport()
 
 void olc_PGE_ConstructFontSheet()
 {
-    char *data = (char*)calloc(sizeof(char), 1025);
-    
-    strcat(data, "?Q`0001oOch0o01o@F40o0<AGD4090LAGD<090@A7ch0?00O7Q`0600>00000000");
-    strcat(data, "O000000nOT0063Qo4d8>?7a14Gno94AA4gno94AaOT0>o3`oO400o7QN00000400");
-    strcat(data, "Of80001oOg<7O7moBGT7O7lABET024@aBEd714AiOdl717a_=TH013Q>00000000");
-    strcat(data, "720D000V?V5oB3Q_HdUoE7a9@DdDE4A9@DmoE4A;Hg]oM4Aj8S4D84@`00000000");
-    strcat(data, "OaPT1000Oa`^13P1@AI[?g`1@A=[OdAoHgljA4Ao?WlBA7l1710007l100000000");
-    strcat(data, "ObM6000oOfMV?3QoBDD`O7a0BDDH@5A0BDD<@5A0BGeVO5ao@CQR?5Po00000000");
-    strcat(data, "Oc``000?Ogij70PO2D]??0Ph2DUM@7i`2DTg@7lh2GUj?0TO0C1870T?00000000");
-    strcat(data, "70<4001o?P<7?1QoHg43O;`h@GT0@:@LB@d0>:@hN@L0@?aoN@<0O7ao0000?000");
-    strcat(data, "OcH0001SOglLA7mg24TnK7ln24US>0PL24U140PnOgl0>7QgOcH0K71S0000A000");
-    strcat(data, "00H00000@Dm1S007@DUSg00?OdTnH7YhOfTL<7Yh@Cl0700?@Ah0300700000000");
-    strcat(data, "<008001QL00ZA41a@6HnI<1i@FHLM81M@@0LG81?O`0nC?Y7?`0ZA7Y300080000");
-    strcat(data, "O`082000Oh0827mo6>Hn?Wmo?6HnMb11MP08@C11H`08@FP0@@0004@000000000");
-    strcat(data, "00P00001Oab00003OcKP0006@6=PMgl<@440MglH@000000`@000001P00000000");
-    strcat(data, "Ob@8@@00Ob@8@Ga13R@8Mga172@8?PAo3R@827QoOb@820@0O`0007`0000007P0");
-    strcat(data, "O`000P08Od400g`<3V=P0G`673IP0`@3>1`00P@6O`P00g`<O`000GP800000000");
-    strcat(data, "?P9PL020O`<`N3R0@E4HC7b0@ET<ATB0@@l6C4B0O`H3N7b0?P01L3R000000020");
+    // Thanks for the tip, MaGetzUb
+    char* data = "" 
+    "?Q`0001oOch0o01o@F40o0<AGD4090LAGD<090@A7ch0?00O7Q`0600>00000000"
+    "O000000nOT0063Qo4d8>?7a14Gno94AA4gno94AaOT0>o3`oO400o7QN00000400"
+    "Of80001oOg<7O7moBGT7O7lABET024@aBEd714AiOdl717a_=TH013Q>00000000"
+    "720D000V?V5oB3Q_HdUoE7a9@DdDE4A9@DmoE4A;Hg]oM4Aj8S4D84@`00000000"
+    "OaPT1000Oa`^13P1@AI[?g`1@A=[OdAoHgljA4Ao?WlBA7l1710007l100000000"
+    "ObM6000oOfMV?3QoBDD`O7a0BDDH@5A0BDD<@5A0BGeVO5ao@CQR?5Po00000000"
+    "Oc``000?Ogij70PO2D]??0Ph2DUM@7i`2DTg@7lh2GUj?0TO0C1870T?00000000"
+    "70<4001o?P<7?1QoHg43O;`h@GT0@:@LB@d0>:@hN@L0@?aoN@<0O7ao0000?000"
+    "OcH0001SOglLA7mg24TnK7ln24US>0PL24U140PnOgl0>7QgOcH0K71S0000A000"
+    "00H00000@Dm1S007@DUSg00?OdTnH7YhOfTL<7Yh@Cl0700?@Ah0300700000000"
+    "<008001QL00ZA41a@6HnI<1i@FHLM81M@@0LG81?O`0nC?Y7?`0ZA7Y300080000"
+    "O`082000Oh0827mo6>Hn?Wmo?6HnMb11MP08@C11H`08@FP0@@0004@000000000"
+    "00P00001Oab00003OcKP0006@6=PMgl<@440MglH@000000`@000001P00000000"
+    "Ob@8@@00Ob@8@Ga13R@8Mga172@8?PAo3R@827QoOb@820@0O`0007`0000007P0"
+    "O`000P08Od400g`<3V=P0G`673IP0`@3>1`00P@6O`P00g`<O`000GP800000000"
+    "?P9PL020O`<`N3R0@E4HC7b0@ET<ATB0@@l6C4B0O`H3N7b0?P01L3R000000020";
 
     PGE.fontSprite = olc_Sprite_Create(128, 48);
     int px = 0, py = 0;
@@ -1617,7 +1802,7 @@ void olc_Renderer_DisplayFrame()
 void olc_Renderer_PrepareDrawing()
 {}
 
-void olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint)
+void olc_Renderer_DrawLayerQuad(olc_vf2d offset, olc_vf2d scale, const olc_Pixel tint)
 {
     SDL_Texture* texture = texturemap_get(&mapTextures, nActiveTexture);
 
@@ -1639,25 +1824,24 @@ olc_vf2d PointToScreen(olc_vf2d point)
     return ret;
 }
 
-SDL_Rect GetSubTexture(const olc_vf2d uv[4], olc_Decal *decal)
+SDL_Rect GetSubTexture(olc_vf2d uv[4], olc_Decal *decal)
 {
     // get the top left of the sub-texture
-    olc_vf2d topLeft, bottomRight;
+    olc_vf2d vPos = olc_VF2D(uv[0].x / decal->vUVScale.x, uv[0].y / decal->vUVScale.y);
     
-    topLeft.x = uv[0].x / decal->vUVScale.x;
-    topLeft.y = uv[0].y / decal->vUVScale.y;
-
-    // get the bottom right of the sub-texture
-    bottomRight.x = uv[2].x / decal->vUVScale.x;
-    bottomRight.y = uv[2].y / decal->vUVScale.y;
-
+    // get the size of the sub-texture
+    olc_vf2d vSize = {
+        (uv[3].x - uv[0].x) /  decal->vUVScale.x,
+        (uv[1].y - uv[0].y) / decal->vUVScale.y
+    };
+    
     // generate rectangle for the sub-texture
     SDL_Rect rect;
     
-    rect.x = topLeft.x;
-    rect.y = topLeft.y;
-    rect.w = bottomRight.x - topLeft.x;
-    rect.h = bottomRight.y - topLeft.x;
+    rect.x = vPos.x;
+    rect.y = vPos.y;
+    rect.w = vSize.x;
+    rect.h = vSize.y;
     
     return rect;
 }
@@ -1666,8 +1850,10 @@ SDL_Rect VecToRect(olc_vf2d pos, olc_vf2d size)
 {
     SDL_Rect rect;
 
-    rect.x = pos.x;	rect.y = pos.y;
-    rect.w = size.x; rect.h = size.y;
+    rect.x = pos.x;
+    rect.y = pos.y;
+    rect.w = size.x;
+    rect.h = size.y;
 
     return rect;
 }
@@ -1681,7 +1867,7 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     olc_vf2d vSize;
 
     SDL_Texture* texture = texturemap_get(&mapTextures, decal->decal->id);
-
+    
     // convert decal positions to screen space
     olc_vf2d pos[4] = {
         PointToScreen(decal->pos[0]),
@@ -1693,22 +1879,20 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     // only calculate the angle if we have to
     if(pos[0].x == pos[1].x)
     {
-        
-        vSize.x  = pos[3].x - pos[0].x;
+        vSize.x = pos[3].x - pos[0].x;
         vSize.y = pos[1].y - pos[0].y;
         fAngle = 0;
     }
     else
     {
-        float a = pos[3].x - pos[0].x;
-        float b = pos[3].y - pos[0].y;
+        // width
+        olc_vf2d a = { pos[3].x - pos[0].x, pos[3].y - pos[0].y };
+        vSize.x = sqrt(a.x * a.x + a.y * a.y);
         
-        float c = pos[1].x - pos[0].x;
-        float d = pos[1].y - pos[0].y;
+        // height
+        olc_vf2d b = { pos[1].x - pos[0].x, pos[1].y - pos[0].y };
+        vSize.y = sqrt(b.x * b.x + b.y * b.y);
         
-        vSize.x = sqrt((a * a) + (b * b));
-        vSize.y = sqrt((c * c) + (d * d));
-
         fAngle = (atan2(pos[1].y - pos[0].y, pos[1].x - pos[0].x) * 180 / 3.14159f) - 90;
     }
     
@@ -1719,14 +1903,14 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     // Apply Tint
     SDL_SetTextureColorMod(texture, decal->tint[0].r, decal->tint[0].g, decal->tint[0].b);
     SDL_SetTextureAlphaMod(texture, decal->tint[0].a);
-
+    
     // Draw Texture
     SDL_RenderCopyEx(olc_Renderer, texture, &src, &dest, fAngle, &center, SDL_FLIP_NONE);
 }
 
 uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
 {
-    int id = nTextureID; nTextureID++;
+    int id = nTextureID++;
     SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET, width, height);
     if(texture == NULL)
     {
@@ -1837,8 +2021,6 @@ void inputmap_set(vector* v, size_t key, uint8_t val)
     // push into vector
     vector_push(v, temp);    
 }
-
-
 
 int32_t olc_Platform_ApplicationStartUp()
 { return olc_RCODE_OK; }
@@ -2059,4 +2241,3 @@ olc_Sprite* olc_Sprite_LoadFromFile(const char* filename)
 
     return sprite;
 }
-

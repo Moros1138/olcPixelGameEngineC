@@ -4,3 +4,7 @@ src/olcPixelGameEngine.h
 .vscode/
 
 src/test
+
+src/test2
+
+src/test.cpp
