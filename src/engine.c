@@ -1537,11 +1537,11 @@ void olc_PGE_ConstructFontSheet()
 
 void olc_PGE_CoreUpdate()
 {
-    clock_gettime(CLOCK_MONOTONIC, &PGE.tp2);
-    double duration = 1000.0*PGE.tp2.tv_sec + 1e-6*PGE.tp2.tv_nsec - (1000.0*PGE.tp1.tv_sec + 1e-6*PGE.tp1.tv_nsec);
+    PGE.tp2 = SDL_GetTicks();
+    double duration = (double)(PGE.tp2 - PGE.tp1) / 1000;
     PGE.tp1 = PGE.tp2;
 
-    float fElapsedTime = (float)(duration / 1000.0f);
+    float fElapsedTime = (float)(duration);
     PGE.fLastElapsed = fElapsedTime;
 
     olc_Platform_HandleSystemEvent();
@@ -1686,9 +1686,8 @@ void olc_PGE_PrepareEngine()
     // Construct default font sheet
     olc_PGE_ConstructFontSheet();
 
-    clock_gettime(CLOCK_MONOTONIC, &PGE.tp1); // POSIX; use timespec_get in C11
-    clock_gettime(CLOCK_MONOTONIC, &PGE.tp2);
-
+    PGE.tp1 = SDL_GetTicks();
+    PGE.tp2 = SDL_GetTicks();
 }
 
 void olc_PGE_UpdateMouseState(int32_t button, bool state)
