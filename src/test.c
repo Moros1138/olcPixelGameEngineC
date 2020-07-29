@@ -125,11 +125,5 @@ int main(int argc, char* argv[])
         Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
     }
 
-    SetAppName("IT WORKS!!!");
-    if(Construct(320, 240, 3, 3, false, false))
-    {
-        Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
-    }
-
     return 0;
 }
