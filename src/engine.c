@@ -1650,11 +1650,12 @@ void olc_PGE_ConstructFontSheet()
 
 void olc_PGE_CoreUpdate()
 {
-    PGE.tp2 = SDL_GetTicks();
-    double duration = (double)(PGE.tp2 - PGE.tp1) / 1000;
+    PGE.tp2 = SDL_GetPerformanceCounter();
+    double duration = (double)((PGE.tp2 - PGE.tp1)*1000) / SDL_GetPerformanceFrequency();
     PGE.tp1 = PGE.tp2;
 
-    float fElapsedTime = (float)(duration);
+
+    float fElapsedTime = (float)(duration/1000);
     PGE.fLastElapsed = fElapsedTime;
 
     olc_Platform_HandleSystemEvent();
@@ -1798,8 +1799,8 @@ void olc_PGE_PrepareEngine()
     // Construct default font sheet
     olc_PGE_ConstructFontSheet();
 
-    PGE.tp1 = SDL_GetTicks();
-    PGE.tp2 = SDL_GetTicks();
+    PGE.tp1 = SDL_GetPerformanceCounter();
+    PGE.tp2 = SDL_GetPerformanceCounter();
 }
 
 void olc_PGE_UpdateMouseState(int32_t button, bool state)
