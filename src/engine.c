@@ -281,6 +281,9 @@ olc_Sprite* olc_Sprite_LoadFromPGESprFile(const char *sImageFile)
         return sprite;
     }
 
+    fprintf(stderr, "Error loading PGESprite: %s\n", sImageFile);
+    exit(EXIT_FAILURE);
+
     return NULL;
 }
 
