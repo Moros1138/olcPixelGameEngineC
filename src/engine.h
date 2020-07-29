@@ -299,7 +299,7 @@ typedef struct
     uint8_t		nTargetLayer;
     uint32_t	nLastFPS;
     olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2);
-    uint32_t tp1, tp2;
+    uint64_t tp1, tp2;
 
     // State of keyboard		
     bool         pKeyNewState[256];

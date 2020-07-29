@@ -25,7 +25,7 @@ bool OnUserCreate()
     DrawString(20,  4, "4", olc_WHITE, 1);
 
     SetDrawTarget(NULL);
-
+    sprite = olc_Sprite_LoadFromPGESprFile("test.spr");
     decal = olc_Decal_Create(sprite);
 
     return true;
@@ -111,12 +111,20 @@ bool OnUserUpdate(float fElapsedTime)
 
 bool OnUserDestroy()
 {
+    olc_Decal_Destroy(decal);
+    olc_Sprite_Destroy(sprite);
     return true;
 }
 
 
 int main(int argc, char* argv[])
 {
+    SetAppName("IT WORKS!!!");
+    if(Construct(320, 240, 3, 3, false, false))
+    {
+        Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
+    }
+
     SetAppName("IT WORKS!!!");
     if(Construct(320, 240, 3, 3, false, false))
     {

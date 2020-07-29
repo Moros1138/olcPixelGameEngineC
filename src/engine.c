@@ -2024,7 +2024,7 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
 uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
 {
     int id = nTextureID++;
-    SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET, width, height);
+    SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
     if(texture == NULL)
     {
         fprintf(stderr, "Failed to create texture.\n");
@@ -2140,6 +2140,15 @@ int32_t olc_Platform_ApplicationStartUp()
 
 int32_t olc_Platform_ApplicationCleanUp()
 {
+    for(size_t i = 0; i < PGE.vLayers.size; i++)
+    {
+        olc_LayerDesc* layer = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
+        vector_clear(&layer->vecDecalInstance);
+    }
+    vector_clear(&PGE.vLayers);
+
+    inputmap_destroy(&mapKeys);
+    
     SDL_DestroyRenderer(olc_Renderer);
     SDL_DestroyWindow(olc_Window);
     SDL_Quit();
@@ -2150,7 +2159,10 @@ int32_t olc_Platform_ThreadStartUp()
 { return olc_RCODE_OK; }
 
 int32_t olc_Platform_ThreadCleanUp()
-{ return olc_RCODE_OK; }
+{
+    olc_Renderer_DestroyDevice();
+    return olc_RCODE_OK;
+}
 
 int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize)
 {
