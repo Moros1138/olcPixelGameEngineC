@@ -42,6 +42,8 @@ size_t vector_size(vector* v);
 
 
 #define UNUSED(x) (void)(x)
+#define olc_MIN(a, b) (a < b) ? a : b
+#define olc_MAX(a, b) (a > b) ? a : b
 
 #if !defined(OLC_GFX_OPENGL33) && !defined(OLC_GFX_DIRECTX10)
 	#define OLC_GFX_OPENGL10
@@ -65,8 +67,8 @@ enum olc_rcode
 // O------------------------------------------------------------------------------O
 typedef union Pixel
 {
-    uint32_t n;
     struct { uint8_t r; uint8_t g; uint8_t b; uint8_t a; };
+    uint32_t n;
 } olc_Pixel;
 
 enum olc_PixelMode
@@ -233,6 +235,7 @@ typedef struct DecalInstance
 
 olc_DecalInstance* olc_DecalInstance_Create();
 
+// NOT IMPLEMENTED - Here for Reasons
 typedef struct DecalTriangleInstance
 {
     olc_vf2d points[3];
@@ -409,20 +412,20 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
 void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint);
 // Draws a region of a decal, with optional scale and tinting
 void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
-// Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
+// NOT IMPLEMENTED! - Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
 void DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col);
-// Draws a decal with 4 arbitrary points, warping the texture to look "correct"
+// NOT IMPLEMENTED! - Draws a decal with 4 arbitrary points, warping the texture to look "correct"
 void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint);
-// As above, but you can specify a region of a decal source sprite
+// NOT IMPLEMENTED! - As above, but you can specify a region of a decal source sprite
 void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint);
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint);
 void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
 // Draws a multiline string as a decal, with tiniting and scaling
 void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale);
-// Draws a single shaded filled rectangle as a decal
+// NOT IMPLEMENTED! - Draws a single shaded filled rectangle as a decal
 void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col);
-// Draws a corner shaded rectangle as a decal
+// NOT IMPLEMENTED! - Draws a corner shaded rectangle as a decal
 void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
 
 
@@ -433,9 +436,9 @@ olc_vi2d GetTextSize(const char* s);
 void Clear(olc_Pixel p);
 
 
-
-
 // CONFIGURATION ROUTINES
+
+
 void SetAppName(const char *title);
 
 // Layer targeting functions

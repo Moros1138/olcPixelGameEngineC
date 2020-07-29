@@ -239,8 +239,75 @@ void olc_Sprite_Destroy(olc_Sprite* sprite)
     sprite = NULL;
 }
 
-// olc_Sprite* olc_SpriteLoadFromPGESprFile(const char *sImageFile);
-// int32_t olc_SpriteSaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
+olc_Sprite* olc_Sprite_LoadFromPGESprFile(const char *sImageFile)
+{
+    int32_t width;
+    int32_t height;
+    uint32_t* pixels;
+    
+    FILE* fp = fopen(sImageFile, "r");
+    if(fp)
+    {
+        fread(&width, sizeof(int32_t), 1, fp);
+        fread(&height, sizeof(int32_t), 1, fp);
+
+        pixels = malloc(width*height*sizeof(uint32_t));
+        if(pixels == NULL)
+        {
+            fprintf(stderr, "Error loading allocating pixel data in PGESprite Loader.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        fread(pixels, sizeof(uint32_t), width*height, fp);
+
+        olc_Sprite* sprite = olc_Sprite_Create(width, height);
+
+        for(int y = 0; y < height; y++)
+        {
+            for(int x = 0; x < width; x++)
+            {
+                olc_Pixel p = olc_PixelRAW(pixels[y * width + x]);
+                
+                if(p.a == 0)
+                    p = olc_BLANK;
+
+                olc_Sprite_SetPixel(sprite, x, y, p);
+            }
+        }
+        
+        fclose(fp);
+        free(pixels);
+
+        return sprite;
+    }
+
+    return NULL;
+}
+
+int32_t olc_Sprite_SaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile)
+{
+    if(sprite == NULL)
+        return olc_RCODE_FAIL;
+
+    uint32_t* pixels = olc_Sprite_GetData(sprite);
+
+    if(pixels == NULL) return olc_RCODE_FAIL;
+
+    FILE* fp = fopen(sImageFile, "w");
+    if(fp)
+    {
+        fwrite(&sprite->width, sizeof(uint32_t), 1, fp);
+        fwrite(&sprite->height, sizeof(uint32_t), 1, fp);
+        fwrite(pixels, sizeof(uint32_t), sprite->width * sprite->height, fp);
+        
+        fclose(fp);    
+        return olc_RCODE_OK;
+    }
+    
+    fclose(fp);
+
+    return olc_RCODE_FAIL;
+}
 
 void olc_Sprite_SetSampleMode(olc_Sprite* sprite, uint32_t mode)
 {
@@ -283,7 +350,29 @@ olc_Pixel olc_Sprite_Sample(olc_Sprite* sprite, float x, float y)
     return olc_Sprite_GetPixel(sprite, sx, sy);
 }
 
-// olc_Pixel olc_Sprite_SampleBL(olc_Sprite* sprite, float u, float v);
+olc_Pixel olc_Sprite_SampleBL(olc_Sprite* sprite, float u, float v)
+{
+    u = u * sprite->width - 0.5f;
+    v = v * sprite->height - 0.5f;
+
+    int x = (int)floor(u); // cast to int rounds toward zero, not downward
+    int y = (int)floor(v); // Thanks @joshinils
+    float u_ratio = u - x;
+    float v_ratio = v - y;
+    float u_opposite = 1 - u_ratio;
+    float v_opposite = 1 - v_ratio;
+
+    olc_Pixel p1 = olc_Sprite_GetPixel(sprite, olc_MAX(x, 0), olc_MAX(y, 0));
+    olc_Pixel p2 = olc_Sprite_GetPixel(sprite, olc_MIN(x + 1, (int)sprite->width - 1), olc_MAX(y, 0));
+    olc_Pixel p3 = olc_Sprite_GetPixel(sprite, olc_MAX(x, 0), olc_MIN(y + 1, (int)sprite->height - 1));
+    olc_Pixel p4 = olc_Sprite_GetPixel(sprite, olc_MIN(x + 1, (int)sprite->width - 1), olc_MIN(y + 1, (int)sprite->height - 1));
+
+    return olc_PixelRGB(
+    	(uint8_t)((p1.r * u_opposite + p2.r * u_ratio) * v_opposite + (p3.r * u_opposite + p4.r * u_ratio) * v_ratio),
+    	(uint8_t)((p1.g * u_opposite + p2.g * u_ratio) * v_opposite + (p3.g * u_opposite + p4.g * u_ratio) * v_ratio),
+    	(uint8_t)((p1.b * u_opposite + p2.b * u_ratio) * v_opposite + (p3.b * u_opposite + p4.b * u_ratio) * v_ratio));
+}
+
 uint32_t* olc_Sprite_GetData(olc_Sprite* sprite)
 {
     return sprite->pixels;
@@ -1136,15 +1225,21 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
 
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
 void DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col)
-{}
+{
+    // IMPOSSIBLE WITH SDL (AT LEAST HOW I'M USING IT), HERE FOR, REASONS
+}
 
 // Draws a decal with 4 arbitrary points, warping the texture to look "correct"
 void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint)
-{}
+{
+    // IMPOSSIBLE WITH SDL (AT LEAST HOW I'M USING IT), HERE FOR, REASONS
+}
 
 // As above, but you can specify a region of a decal source sprite
 void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint)
-{}
+{
+    // IMPOSSIBLE WITH SDL (AT LEAST HOW I'M USING IT), HERE FOR, REASONS
+}
 
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
@@ -1241,11 +1336,15 @@ void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_v
 
 // Draws a single shaded filled rectangle as a decal
 void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col)
-{}
+{
+    // IMPOSSIBLE WITH SDL (AT LEAST HOW I'M USING IT), HERE FOR, REASONS
+}
 
 // Draws a corner shaded rectangle as a decal
 void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR)
-{}
+{
+    // IMPOSSIBLE WITH SDL (AT LEAST HOW I'M USING IT), HERE FOR, REASONS
+}
 
 
 
@@ -1823,6 +1922,7 @@ void olc_Renderer_DrawLayerQuad(olc_vf2d offset, olc_vf2d scale, const olc_Pixel
     SDL_RenderCopy(olc_Renderer, texture, NULL, NULL);
 }
 
+// Locally used functions to convert OpenGL to Screen Coords
 olc_vf2d PointToScreen(olc_vf2d point)
 {
     olc_vf2d ret;
