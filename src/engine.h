@@ -540,15 +540,10 @@ typedef struct
     SDL_Texture* t;
 } texturedata;
 
-static vector mapTextures;
+static SDL_Texture** vTextures;
 static int nActiveTexture = -1;
 static int nTextureID = 0;
-
-void texturemap_init(vector *v);
-void texturemap_destroy(vector* v);
-void texturemap_delete(vector* v, int id);
-SDL_Texture* texturemap_get(vector* v, int id);
-void texturemap_set(vector* v, int id, SDL_Texture* texture);
+static int nOpenSlot = 0;
 
 void       olc_Renderer_PrepareDevice();
 int32_t    olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC);

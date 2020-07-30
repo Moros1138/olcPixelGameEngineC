@@ -1962,88 +1962,24 @@ void olc_PGE_Terminate()
 
 // RENDERER
 
-void texturemap_init(vector* v)
-{
-    vector_init(v);
-}
-
-void texturemap_destroy(vector* v)
-{
-    vector_free(v);
-}
-
-void texturemap_delete(vector* v, int id)
-{
-    for(int i = 0; i < v->size; i++)
-    {
-        texturedata* temp = (texturedata*)vector_get(v, i);
-        if(id == temp->id)
-        {
-            SDL_DestroyTexture(temp->t);
-            temp->t = NULL;
-            vector_remove(v, i);
-            return;
-        }
-    }
-}
-
-SDL_Texture* texturemap_get(vector* v, int id)
-{
-    for(int i = 0; i < v->size; i++)
-    {
-        texturedata* temp = (texturedata*)vector_get(v, i);
-        if(id == temp->id)
-            return temp->t;
-    }
-   
-    return 0;
-}
-
-void texturemap_set(vector* v, int id, SDL_Texture* texture)
-{
-    // check if key already exists
-    for(int i = 0; i < v->size; i++)
-    {
-        texturedata* temp = (texturedata*)vector_get(v, i);
-        if(id == temp->id)
-        {
-            temp->t = texture;
-            return;
-        }
-    }
-
-    // if we made it here, we have to create a new inputdata
-    texturedata* temp = (texturedata*)malloc(sizeof(texturedata));
-    if(temp == NULL)
-    {
-        fprintf(stderr, "Failed to allocate memory.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    // set data
-    temp->id = id;
-    temp->t = texture;
-
-    // push into vector
-    vector_push(v, temp);
-}
 
 void olc_Renderer_PrepareDevice()
 {}
 
 int32_t olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC)
 {
-    texturemap_init(&mapTextures);
+    vTextures = cvector_type_alloc(SDL_Texture*);
     return olc_RCODE_OK;
 }
 
 int32_t olc_Renderer_DestroyDevice()
 {
-    for(int i = 0; i < mapTextures.size; i++)
+    for(size_t i = 0; i < cvector_size(vTextures); i++)
     {
-        texturemap_delete(&mapTextures, i);
+        SDL_DestroyTexture(vTextures[i]);
+        vTextures[i] = NULL;
     }
-    texturemap_destroy(&mapTextures);
+    cvector_free(vTextures);
     return olc_RCODE_OK;
 }
 
@@ -2057,14 +1993,12 @@ void olc_Renderer_PrepareDrawing()
 
 void olc_Renderer_DrawLayerQuad(olc_vf2d offset, olc_vf2d scale, const olc_Pixel tint)
 {
-    SDL_Texture* texture = texturemap_get(&mapTextures, nActiveTexture);
-
     // Apply Tint
-    SDL_SetTextureColorMod(texture, tint.r, tint.g, tint.b);
-    SDL_SetTextureAlphaMod(texture, tint.a);
+    SDL_SetTextureColorMod(vTextures[nActiveTexture], tint.r, tint.g, tint.b);
+    SDL_SetTextureAlphaMod(vTextures[nActiveTexture], tint.a);
 
     // Draw Texture
-    SDL_RenderCopy(olc_Renderer, texture, NULL, NULL);
+    SDL_RenderCopy(olc_Renderer, vTextures[nActiveTexture], NULL, NULL);
 }
 
 // Locally used functions to convert OpenGL to Screen Coords
@@ -2120,8 +2054,6 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     float fAngle;
     olc_vf2d vSize;
 
-    SDL_Texture* texture = texturemap_get(&mapTextures, decal->decal->id);
-    
     // convert decal positions to screen space
     olc_vf2d pos[4] = {
         PointToScreen(decal->pos[0]),
@@ -2155,37 +2087,61 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     SDL_Point center; center.x = 0; center.y = 0;
 
     // Apply Tint
-    SDL_SetTextureColorMod(texture, decal->tint[0].r, decal->tint[0].g, decal->tint[0].b);
-    SDL_SetTextureAlphaMod(texture, decal->tint[0].a);
+    SDL_SetTextureColorMod(vTextures[decal->decal->id], decal->tint[0].r, decal->tint[0].g, decal->tint[0].b);
+    SDL_SetTextureAlphaMod(vTextures[decal->decal->id], decal->tint[0].a);
     
     // Draw Texture
-    SDL_RenderCopyEx(olc_Renderer, texture, &src, &dest, fAngle, &center, SDL_FLIP_NONE);
+    SDL_RenderCopyEx(olc_Renderer, vTextures[decal->decal->id], &src, &dest, fAngle, &center, SDL_FLIP_NONE);
 }
 
 uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
 {
+    // reuse empty slots from deleted textures
+    if(nOpenSlot > 0)
+    {
+        for(size_t i = 0; i < cvector_size(vTextures); i++)
+        {
+            if(vTextures[i] == NULL)
+            {
+                nOpenSlot--;
+                vTextures[i] = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+                if(vTextures[i] == NULL)
+                {
+                    fprintf(stderr, "Failed to create texture.\n");
+                    exit(EXIT_FAILURE);
+                }
+                SDL_SetTextureBlendMode(vTextures[i], SDL_BLENDMODE_BLEND);
+                return i;
+            }
+        }
+    }
+
     int id = nTextureID++;
-    SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
-    if(texture == NULL)
+    SDL_Texture** texture = cvector_push(vTextures);
+    *texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+    if(*texture == NULL)
     {
         fprintf(stderr, "Failed to create texture.\n");
         exit(EXIT_FAILURE);
     }
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    texturemap_set(&mapTextures, id, texture);
-
+    SDL_SetTextureBlendMode(*texture, SDL_BLENDMODE_BLEND);
+    
     return id;
 }
 
 void olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr)
 {
-    SDL_Texture* texture = texturemap_get(&mapTextures, id);
-    SDL_UpdateTexture(texture, NULL, (void*)olc_Sprite_GetData(spr), spr->width * 4);
+    SDL_UpdateTexture(vTextures[id], NULL, (void*)olc_Sprite_GetData(spr), spr->width * 4);
 }
 
 uint32_t olc_Renderer_DeleteTexture(const uint32_t id)
 {
-    texturemap_delete(&mapTextures, id);
+    if(vTextures[id] != NULL)
+    {
+        SDL_DestroyTexture(vTextures[id]);
+        vTextures[id] = NULL;
+        nOpenSlot++;
+    }
     return id;
 }
 
