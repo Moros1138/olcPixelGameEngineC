@@ -16,6 +16,137 @@ void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i
 void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }
 bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
 
+void* cvector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks) {
+
+	CVector* cvector = NULL;
+	size_t headerSize = sizeof(CVector);
+
+	//allocation
+	cvector = (CVector*)callbacks->allocate(headerSize + elementSize * initialSize);
+	memset(cvector, 0, headerSize + elementSize * initialSize);
+	cvector->allocation = elementSize * initialSize;
+	cvector->size = 0;
+	cvector->elementSize = elementSize;
+	cvector->staticSize = 0;
+	
+	cvector->callbacks.allocate = callbacks->allocate;
+	cvector->callbacks.reallocate = callbacks->reallocate;
+	cvector->callbacks.release = callbacks->release;
+
+	return (void*)(((size_t)cvector) + headerSize);
+}
+
+void* cvector_alloc_initial_capacity(size_t elementSize, size_t initialSize) {
+	AllocatorCallbacks callbacks = {
+		&malloc,
+		&realloc,
+		&free
+	};
+	return cvector_alloc_initial_capacity_callbacks(elementSize, initialSize, &callbacks);
+}
+
+
+void* cvector_alloc_static(size_t elementSize, size_t elements) {
+	void* mem = cvector_alloc_initial_capacity(elementSize, elements);
+
+}
+void* cvector_alloc(size_t elementSize) {
+	return cvector_alloc_initial_capacity(elementSize, 1);
+}
+
+void cvector_free(void* vect) {
+	CVector* vector = (CVector*)((size_t)vect - sizeof(CVector));
+	vector->callbacks.release((void*)vector);
+}
+
+void* _cvector_push(void** vect) {
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)(((size_t)*vect) - headerSize);
+	void* back = NULL;
+	void* alloc = NULL;
+	size_t newAlloc = 0;
+	size_t allocated = vector->allocation / vector->elementSize;
+
+
+	if(vector->size == allocated && (!vector->staticSize)) {
+		// printf("Resize! (%li)\n", (vector->size*2));
+		newAlloc = vector->elementSize * vector->size * 2;
+		alloc = vector->callbacks.reallocate(vector, headerSize + newAlloc);
+		if(alloc) {
+			*vect = (void*)((size_t)alloc + headerSize);
+			vector = alloc;
+			vector->allocation = newAlloc;
+		} else {
+			assert("Couldn't resize the vector!" && 0);
+			free(vector);
+			return NULL;
+		}
+	}
+
+	size_t backIdx = vector->size;
+	vector->size++;
+
+	return (void*)((size_t)*vect + vector->elementSize*backIdx);
+}
+
+
+void vector_pop(void* vect){
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+
+	if(vector->size) {
+		vector->size--;
+	}
+}
+
+size_t cvector_size(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return vector->size;
+}
+
+//Just for the sake of formality
+void* cvector_front(void* vect)
+{
+	return vect;
+}
+
+void* cvector_back(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return (void*)((size_t)vect + (vector->size-1) * vector->elementSize);
+}
+
+size_t cvector_element_size(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return vector->elementSize;
+}
+
+void* cvector_at(void* vect, size_t index)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return (void*)((size_t)vect + (vector->size - 1) * index);
+}
+
+void cvector_clear(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	vector->size = 0;
+}
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// THIS WILL BE GONE SOON!!
+
 // init vector struct
 void vector_init(vector* v)
 {
@@ -146,6 +277,9 @@ void vector_remove(vector* v, size_t index)
 // get number of elements currently stored in the provided vector
 size_t vector_size(vector* v)
 { return v->size; }
+
+/// THIS WILL BE GONE SOON!!
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 olc_Pixel olc_PixelDefault()

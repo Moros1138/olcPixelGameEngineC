@@ -14,6 +14,46 @@
 #include <stdlib.h>
 #include <time.h>
 
+typedef void* allocate_t(size_t);
+typedef void* reallocate_t(void*, size_t);
+typedef void release_t(void*);
+
+typedef struct {
+	allocate_t* allocate;
+	reallocate_t* reallocate;
+	release_t* release;
+} AllocatorCallbacks;
+
+typedef struct {
+	size_t allocation;
+	size_t size;
+	size_t elementSize;
+	size_t staticSize;
+	AllocatorCallbacks callbacks;
+} CVector;
+
+void* cvector_alloc_static(size_t elementSize, size_t elements);
+#define cvector_type_alloc_static(type, elements) cvector_alloc_static(sizeof(type), elements)
+void* cvector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks);
+#define cvactor_type_alloc_capacity(type, initialSize) cvector_alloc_initial_capacity(sizeof(type), initialSize)
+void* cvector_alloc(size_t elementSize);
+#define cvector_type_alloc(type) cvector_alloc(sizeof(type))
+void cvector_free(void* vect);
+void* _cvector_push(void** vect);
+#define cvector_push(vect) _cvector_push((void**)&vect)
+void cvector_pop(void* vect);
+size_t cvector_size(void* vect);
+//Not really needed..
+void* cvector_front(void* vect);
+void* cvector_back(void* vect);
+size_t cvector_element_size(void* vect);
+void* cvector_at(void* vect, size_t index);
+void cvector_clear(void* vect);
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// THIS WILL BE GONE SOON!!
+
 typedef struct vector
 {
     size_t capacity;
@@ -39,6 +79,9 @@ void* vector_get(vector* v, size_t index);
 void vector_remove(vector* v, size_t index);
 // get number of elements currently stored in the provided vector
 size_t vector_size(vector* v);
+
+/// THIS WILL BE GONE SOON!!
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #define UNUSED(x) (void)(x)
