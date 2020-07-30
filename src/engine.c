@@ -16,7 +16,7 @@ void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i
 void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }
 bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
 
-void* cvector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks) {
+void* vector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks) {
 
 	CVector* cvector = NULL;
 	size_t headerSize = sizeof(CVector);
@@ -36,30 +36,30 @@ void* cvector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initia
 	return (void*)(((size_t)cvector) + headerSize);
 }
 
-void* cvector_alloc_initial_capacity(size_t elementSize, size_t initialSize) {
+void* vector_alloc_initial_capacity(size_t elementSize, size_t initialSize) {
 	AllocatorCallbacks callbacks = {
 		&malloc,
 		&realloc,
 		&free
 	};
-	return cvector_alloc_initial_capacity_callbacks(elementSize, initialSize, &callbacks);
+	return vector_alloc_initial_capacity_callbacks(elementSize, initialSize, &callbacks);
 }
 
 
-void* cvector_alloc_static(size_t elementSize, size_t elements) {
-	void* mem = cvector_alloc_initial_capacity(elementSize, elements);
+void* vector_alloc_static(size_t elementSize, size_t elements) {
+	void* mem = vector_alloc_initial_capacity(elementSize, elements);
 
 }
-void* cvector_alloc(size_t elementSize) {
-	return cvector_alloc_initial_capacity(elementSize, 1);
+void* vector_alloc(size_t elementSize) {
+	return vector_alloc_initial_capacity(elementSize, 1);
 }
 
-void cvector_free(void* vect) {
+void vector_free(void* vect) {
 	CVector* vector = (CVector*)((size_t)vect - sizeof(CVector));
 	vector->callbacks.release((void*)vector);
 }
 
-void* _cvector_push(void** vect) {
+void* _vector_push(void** vect) {
 	size_t headerSize = sizeof(CVector);
 	CVector* vector = (CVector*)(((size_t)*vect) - headerSize);
 	void* back = NULL;
@@ -99,7 +99,7 @@ void vector_pop(void* vect){
 	}
 }
 
-size_t cvector_size(void* vect)
+size_t vector_size(void* vect)
 {
 	size_t headerSize = sizeof(CVector);
 	CVector* vector = (CVector*)((size_t)vect - headerSize);
@@ -107,180 +107,38 @@ size_t cvector_size(void* vect)
 }
 
 //Just for the sake of formality
-void* cvector_front(void* vect)
+void* vector_front(void* vect)
 {
 	return vect;
 }
 
-void* cvector_back(void* vect)
+void* vector_back(void* vect)
 {
 	size_t headerSize = sizeof(CVector);
 	CVector* vector = (CVector*)((size_t)vect - headerSize);
 	return (void*)((size_t)vect + (vector->size-1) * vector->elementSize);
 }
 
-size_t cvector_element_size(void* vect)
+size_t vector_element_size(void* vect)
 {
 	size_t headerSize = sizeof(CVector);
 	CVector* vector = (CVector*)((size_t)vect - headerSize);
 	return vector->elementSize;
 }
 
-void* cvector_at(void* vect, size_t index)
+void* vector_at(void* vect, size_t index)
 {
 	size_t headerSize = sizeof(CVector);
 	CVector* vector = (CVector*)((size_t)vect - headerSize);
 	return (void*)((size_t)vect + (vector->size - 1) * index);
 }
 
-void cvector_clear(void* vect)
+void vector_clear(void* vect)
 {
 	size_t headerSize = sizeof(CVector);
 	CVector* vector = (CVector*)((size_t)vect - headerSize);
 	vector->size = 0;
 }
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// THIS WILL BE GONE SOON!!
-
-// init vector struct
-void vector_init(vector* v)
-{
-    // init vector capacity
-    v->capacity = 0;
-    // init vector size
-    v->size = 0;
-    // no items
-    v->items = NULL;
-}
-
-// resize the capacity of the vector
-void vector_resize(vector* v, size_t capacity)
-{
-    // attempt reallocation
-    void** items = realloc(v->items, sizeof(void *) * capacity);
-    
-    // if success
-    if(items != NULL)
-    {
-        // ensure vector items is pointing to the newly allocated memory
-        v->items = items;
-        // update vector's new capacity
-        v->capacity = capacity;
-    }
-}
-
-// free the memory used by the provided vector and reset capacity and size to 0
-void vector_free(vector* v)
-{
-    // free individual items
-    for(int i = 0; i < vector_size(v); i++)
-    {
-        free(v->items[i]);
-        v->items[i] = NULL;
-    }
-
-    // free the items array
-    free(v->items);
-
-    // reset vector variables
-    v->capacity = 0;
-    v->items = NULL;
-    v->size = 0;
-}
-
-// alias of vector_free
-void vector_clear(vector* v)
-{ vector_free(v); }
-
-// push the provided item at the end of the provided vector
-size_t vector_push(vector* v, void* item)
-{
-    // do nothing if no item is provided
-    if(item == NULL) -1;
-
-    // determine if array needs to be resized
-    if(v->size + 1 > v->capacity)
-    {
-        // resize the array
-        if(v->capacity == 0)
-            vector_resize(v, 1);
-        else
-            vector_resize(v, v->capacity * 2);
-    }
-
-    // increment the size of the array
-    v->size++;
-    
-    // put the item at the end of the array
-    v->items[v->size-1] = item;
-    
-    // return the index of the pushed item
-    return v->size-1;
-}
-
-// set, at the provided index, the provided item into the provided vector
-void vector_set(vector* v, size_t index, void* item)
-{
-    // do nothing if no item is provided
-    if(item == NULL) return;
-    
-    // bounds sanity check
-    if(index >= 0 && index < v->size)
-    {
-        // put the item at the provided index
-        v->items[index] = item;
-    }
-}
-
-// get, from the provided index, the provided item from the provided vector
-void* vector_get(vector* v, size_t index)
-{
-    if(index >= 0 && index < v->size)
-        return v->items[index];
-    
-    return NULL;
-}
-
-// delete the item at the provided index
-void vector_remove(vector* v, size_t index)
-{
-    // bounds sanity check
-    if(index >= 0 && index < v->size)
-    {
-        // free the item's memory
-        free(v->items[index]);
-        
-        // set the item to NULL
-        v->items[index] = NULL;
-
-        // shift the rest of the array by 1
-        for(int i = index; i < v->size - 1; i++)
-        {
-            v->items[i] = v->items[i+1];
-            v->items[i+1] = NULL;
-        }
-        
-        // decrement the size of the array
-        v->size--;
-        
-        // if the size is low enough to resize the array
-        if(v->size > 0 && v->size < v->capacity / 4)
-            vector_resize(v, v->capacity / 2);
-    }
-}
-
-// get number of elements currently stored in the provided vector
-size_t vector_size(vector* v)
-{ return v->size; }
-
-/// THIS WILL BE GONE SOON!!
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 olc_Pixel olc_PixelDefault()
 { return olc_PixelRAW(olc_nDefaultPixel); }
@@ -804,7 +662,7 @@ void SetScreenSize(int w, int h)
     PGE.vScreenSize.x = w;
     PGE.vScreenSize.y = h;
 
-    for(int i = 0; i < cvector_size(PGE.vLayers); i++)
+    for(int i = 0; i < vector_size(PGE.vLayers); i++)
     {
         olc_Sprite_Destroy(PGE.vLayers[i].pDrawTarget);
         PGE.vLayers[i].pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
@@ -1299,7 +1157,7 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     vScreenSpaceDim.x = vScreenSpacePos.x + (2.0f * ((float)(decal->sprite->width) * PGE.vInvScreenSize.x)) * scale.x;
     vScreenSpaceDim.y = vScreenSpacePos.y - (2.0f * ((float)(decal->sprite->height) * PGE.vInvScreenSize.y)) * scale.y;
     
-    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
     
     di->decal = decal;
@@ -1325,7 +1183,7 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
         vScreenSpacePos.y - (2.0f * source_size.y * PGE.vInvScreenSize.y) * scale.y
     );
 
-    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -1364,7 +1222,7 @@ void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_p
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -1386,7 +1244,7 @@ void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf
 
 void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -1560,13 +1418,13 @@ void SetLayerDrawTarget(uint8_t layer)
 
 void EnableLayer(uint8_t layer, bool b)
 {
-    if(layer < cvector_size(PGE.vLayers))
+    if(layer < vector_size(PGE.vLayers))
         PGE.vLayers[layer].bShow = b;
 }
 
 void SetLayerOffset(uint8_t layer, float x, float y)
 {
-    if(layer < cvector_size(PGE.vLayers))
+    if(layer < vector_size(PGE.vLayers))
     {
         PGE.vLayers[layer].vOffset.x = x;
         PGE.vLayers[layer].vOffset.y = y;
@@ -1576,7 +1434,7 @@ void SetLayerOffset(uint8_t layer, float x, float y)
 
 void SetLayerScale(uint8_t layer, float x, float y)
 {
-    if(layer < cvector_size(PGE.vLayers))
+    if(layer < vector_size(PGE.vLayers))
     {
         PGE.vLayers[layer].vScale.x = x;
         PGE.vLayers[layer].vScale.y = y;
@@ -1585,13 +1443,13 @@ void SetLayerScale(uint8_t layer, float x, float y)
 
 void SetLayerTint(uint8_t layer, const olc_Pixel tint)
 {
-    if(layer < cvector_size(PGE.vLayers))
+    if(layer < vector_size(PGE.vLayers))
         PGE.vLayers[layer].tint = tint;
 }
 
 void SetLayerCustomRenderFunction(uint8_t layer, void (*f)())
 {
-    if(layer < cvector_size(PGE.vLayers))
+    if(layer < vector_size(PGE.vLayers))
         PGE.vLayers[layer].funcHook = f;
 }
 
@@ -1600,18 +1458,18 @@ olc_LayerDesc* GetLayers()
 
 uint32_t CreateLayer()
 {
-    olc_LayerDesc* ld = cvector_push(PGE.vLayers);
+    olc_LayerDesc* ld = vector_push(PGE.vLayers);
     
     ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->tint = olc_WHITE;
     ld->funcHook = NULL;
 
-    ld->vecDecalInstance = cvector_type_alloc(olc_DecalInstance);
+    ld->vecDecalInstance = vector_type_alloc(olc_DecalInstance);
 
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
     
-    return (uint32_t)(cvector_size(PGE.vLayers) - 1);
+    return (uint32_t)(vector_size(PGE.vLayers) - 1);
 }
 
 // Change the pixel mode for different optimisations
@@ -1831,7 +1689,7 @@ void olc_PGE_CoreUpdate()
 
     olc_Renderer_PrepareDrawing();
 
-    for(int i = cvector_size(PGE.vLayers)-1; i >= 0; i--)
+    for(int i = vector_size(PGE.vLayers)-1; i >= 0; i--)
     {
         olc_LayerDesc* layer = &PGE.vLayers[i];
         if(layer->bShow)
@@ -1848,13 +1706,13 @@ void olc_PGE_CoreUpdate()
                 olc_Renderer_DrawLayerQuad(layer->vOffset, layer->vScale, layer->tint);
 
                 // Display Decals in order for this layer
-                for(int j = 0; j < cvector_size(layer->vecDecalInstance); j++)
+                for(int j = 0; j < vector_size(layer->vecDecalInstance); j++)
                 {
                     olc_Renderer_DrawDecalQuad(&layer->vecDecalInstance[j]);
                 }
 
                 // clear the instances
-                cvector_clear(layer->vecDecalInstance);
+                vector_clear(layer->vecDecalInstance);
             }
             else
             {
@@ -1888,7 +1746,7 @@ void olc_PGE_PrepareEngine()
     if(olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
 
     // Initialize Layer Vector
-    PGE.vLayers = cvector_type_alloc(olc_LayerDesc);
+    PGE.vLayers = vector_type_alloc(olc_LayerDesc);
 
     // Create Primary Layer "0"
     CreateLayer();
@@ -1928,18 +1786,18 @@ void olc_Renderer_PrepareDevice()
 
 int32_t olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC)
 {
-    vTextures = cvector_type_alloc(SDL_Texture*);
+    vTextures = vector_type_alloc(SDL_Texture*);
     return olc_RCODE_OK;
 }
 
 int32_t olc_Renderer_DestroyDevice()
 {
-    for(size_t i = 0; i < cvector_size(vTextures); i++)
+    for(size_t i = 0; i < vector_size(vTextures); i++)
     {
         SDL_DestroyTexture(vTextures[i]);
         vTextures[i] = NULL;
     }
-    cvector_free(vTextures);
+    vector_free(vTextures);
     return olc_RCODE_OK;
 }
 
@@ -2059,7 +1917,7 @@ uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
     // reuse empty slots from deleted textures
     if(nOpenSlot > 0)
     {
-        for(size_t i = 0; i < cvector_size(vTextures); i++)
+        for(size_t i = 0; i < vector_size(vTextures); i++)
         {
             if(vTextures[i] == NULL)
             {
@@ -2077,7 +1935,7 @@ uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
     }
 
     int id = nTextureID++;
-    SDL_Texture** texture = cvector_push(vTextures);
+    SDL_Texture** texture = vector_push(vTextures);
     *texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
     if(*texture == NULL)
     {
@@ -2177,13 +2035,13 @@ int32_t olc_Platform_ApplicationStartUp()
 
 int32_t olc_Platform_ApplicationCleanUp()
 {
-    for(size_t i = 0; i < cvector_size(PGE.vLayers); i++)
+    for(size_t i = 0; i < vector_size(PGE.vLayers); i++)
     {
-        cvector_clear(PGE.vLayers[i].vecDecalInstance);
-        cvector_free(PGE.vLayers[i].vecDecalInstance);
+        vector_clear(PGE.vLayers[i].vecDecalInstance);
+        vector_free(PGE.vLayers[i].vecDecalInstance);
     }
-    cvector_clear(PGE.vLayers);
-    cvector_free(PGE.vLayers);
+    vector_clear(PGE.vLayers);
+    vector_free(PGE.vLayers);
 
     olc_PGE_DestroyFontSheet();
     olc_Sprite_Destroy(PGE.pDrawTarget);

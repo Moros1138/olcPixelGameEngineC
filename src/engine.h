@@ -32,57 +32,23 @@ typedef struct {
 	AllocatorCallbacks callbacks;
 } CVector;
 
-void* cvector_alloc_static(size_t elementSize, size_t elements);
-#define cvector_type_alloc_static(type, elements) cvector_alloc_static(sizeof(type), elements)
-void* cvector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks);
-#define cvactor_type_alloc_capacity(type, initialSize) cvector_alloc_initial_capacity(sizeof(type), initialSize)
-void* cvector_alloc(size_t elementSize);
-#define cvector_type_alloc(type) cvector_alloc(sizeof(type))
-void cvector_free(void* vect);
-void* _cvector_push(void** vect);
-#define cvector_push(vect) _cvector_push((void**)&vect)
-void cvector_pop(void* vect);
-size_t cvector_size(void* vect);
+void* vector_alloc_static(size_t elementSize, size_t elements);
+#define vector_type_alloc_static(type, elements) vector_alloc_static(sizeof(type), elements)
+void* vector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks);
+#define cvactor_type_alloc_capacity(type, initialSize) vector_alloc_initial_capacity(sizeof(type), initialSize)
+void* vector_alloc(size_t elementSize);
+#define vector_type_alloc(type) vector_alloc(sizeof(type))
+void vector_free(void* vect);
+void* _vector_push(void** vect);
+#define vector_push(vect) _vector_push((void**)&vect)
+void vector_pop(void* vect);
+size_t vector_size(void* vect);
 //Not really needed..
-void* cvector_front(void* vect);
-void* cvector_back(void* vect);
-size_t cvector_element_size(void* vect);
-void* cvector_at(void* vect, size_t index);
-void cvector_clear(void* vect);
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// THIS WILL BE GONE SOON!!
-
-typedef struct vector
-{
-    size_t capacity;
-    void** items;
-    size_t size;
-} vector;
-
-// init vector struct
-void vector_init(vector* v);
-// free the memory used by the provided vector and reset capacity and size to 0
-void vector_free(vector* v);
-// alias of vector_free
-void vector_clear(vector* v);
-// resize the capacity of the vector
-void vector_resize(vector* v, size_t capacity);
-// push the provided item at the end of the provided vector
-size_t vector_push(vector* v, void* item);
-// set, at the provided index, the provided item into the provided vector
-void vector_set(vector* v, size_t index, void* item);
-// get, from the provided index, the provided item from the provided vector
-void* vector_get(vector* v, size_t index);
-// delete the item at the provided index
-void vector_remove(vector* v, size_t index);
-// get number of elements currently stored in the provided vector
-size_t vector_size(vector* v);
-
-/// THIS WILL BE GONE SOON!!
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+void* vector_front(void* vect);
+void* vector_back(void* vect);
+size_t vector_element_size(void* vect);
+void* vector_at(void* vect, size_t index);
+void vector_clear(void* vect);
 
 #define UNUSED(x) (void)(x)
 #define olc_MIN(a, b) (a < b) ? a : b
