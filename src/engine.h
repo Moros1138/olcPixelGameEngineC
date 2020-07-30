@@ -14,32 +14,41 @@
 #include <stdlib.h>
 #include <time.h>
 
-typedef struct vector
-{
-    size_t capacity;
-    void** items;
-    size_t size;
-} vector;
+typedef void* allocate_t(size_t);
+typedef void* reallocate_t(void*, size_t);
+typedef void release_t(void*);
 
-// init vector struct
-void vector_init(vector* v);
-// free the memory used by the provided vector and reset capacity and size to 0
-void vector_free(vector* v);
-// alias of vector_free
-void vector_clear(vector* v);
-// resize the capacity of the vector
-void vector_resize(vector* v, size_t capacity);
-// push the provided item at the end of the provided vector
-size_t vector_push(vector* v, void* item);
-// set, at the provided index, the provided item into the provided vector
-void vector_set(vector* v, size_t index, void* item);
-// get, from the provided index, the provided item from the provided vector
-void* vector_get(vector* v, size_t index);
-// delete the item at the provided index
-void vector_remove(vector* v, size_t index);
-// get number of elements currently stored in the provided vector
-size_t vector_size(vector* v);
+typedef struct {
+	allocate_t* allocate;
+	reallocate_t* reallocate;
+	release_t* release;
+} AllocatorCallbacks;
 
+typedef struct {
+	size_t allocation;
+	size_t size;
+	size_t elementSize;
+	size_t staticSize;
+	AllocatorCallbacks callbacks;
+} CVector;
+
+void* vector_alloc_static(size_t elementSize, size_t elements);
+#define vector_type_alloc_static(type, elements) vector_alloc_static(sizeof(type), elements)
+void* vector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks);
+#define cvactor_type_alloc_capacity(type, initialSize) vector_alloc_initial_capacity(sizeof(type), initialSize)
+void* vector_alloc(size_t elementSize);
+#define vector_type_alloc(type) vector_alloc(sizeof(type))
+void vector_free(void* vect);
+void* _vector_push(void** vect);
+#define vector_push(vect) _vector_push((void**)&vect)
+void vector_pop(void* vect);
+size_t vector_size(void* vect);
+//Not really needed..
+void* vector_front(void* vect);
+void* vector_back(void* vect);
+size_t vector_element_size(void* vect);
+void* vector_at(void* vect, size_t index);
+void vector_clear(void* vect);
 
 #define UNUSED(x) (void)(x)
 #define olc_MIN(a, b) (a < b) ? a : b
@@ -233,7 +242,7 @@ typedef struct DecalInstance
     olc_Pixel tint[4];
 } olc_DecalInstance;
 
-olc_DecalInstance* olc_DecalInstance_Create();
+void olc_DecalInstance_Create(olc_DecalInstance* di);
 
 // NOT IMPLEMENTED - Here for Reasons
 typedef struct DecalTriangleInstance
@@ -252,7 +261,7 @@ typedef struct LayerDesc
     bool bUpdate;
     olc_Sprite* pDrawTarget;
     uint32_t nResID;
-    vector vecDecalInstance;
+    olc_DecalInstance* vecDecalInstance;
     olc_Pixel tint;
     void (*funcHook)();
 } olc_LayerDesc;
@@ -295,7 +304,7 @@ typedef struct
     olc_Sprite* fontSprite;
     olc_Decal*  fontDecal;
     olc_Sprite* pDefaultDrawTarget;
-    vector      vLayers;
+    olc_LayerDesc* vLayers;
     uint8_t		nTargetLayer;
     uint32_t	nLastFPS;
     olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2);
@@ -449,7 +458,7 @@ void SetLayerScale(uint8_t layer, float x, float y);
 void SetLayerTint(uint8_t layer, const olc_Pixel tint);
 void SetLayerCustomRenderFunction(uint8_t layer, void (*f)());
 
-vector GetLayers();
+olc_LayerDesc* GetLayers();
 uint32_t CreateLayer();
 
 // Change the pixel mode for different optimisations
@@ -497,15 +506,10 @@ typedef struct
     SDL_Texture* t;
 } texturedata;
 
-static vector mapTextures;
+static SDL_Texture** vTextures;
 static int nActiveTexture = -1;
 static int nTextureID = 0;
-
-void texturemap_init(vector *v);
-void texturemap_destroy(vector* v);
-void texturemap_delete(vector* v, int id);
-SDL_Texture* texturemap_get(vector* v, int id);
-void texturemap_set(vector* v, int id, SDL_Texture* texture);
+static int nOpenSlot = 0;
 
 void       olc_Renderer_PrepareDevice();
 int32_t    olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC);
@@ -528,13 +532,11 @@ typedef struct
     uint8_t val;
 } inputdata;
 
-static vector mapKeys;
+static inputdata mapKeys[256];
 
-void    inputmap_init(vector *v);
-void    inputmap_destroy(vector* v);
-void    inputmap_delete(vector* v, size_t key);
-uint8_t inputmap_get(vector* v, size_t key);
-void    inputmap_set(vector* v, size_t key, uint8_t val);
+void    inputmap_init();
+uint8_t inputmap_get(size_t key);
+void    inputmap_set(size_t key, uint8_t val);
 
 int32_t olc_Platform_ApplicationStartUp();
 int32_t olc_Platform_ApplicationCleanUp();

@@ -16,137 +16,129 @@ void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i
 void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }
 bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
 
-// init vector struct
-void vector_init(vector* v)
-{
-    // init vector capacity
-    v->capacity = 0;
-    // init vector size
-    v->size = 0;
-    // no items
-    v->items = NULL;
+void* vector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks) {
+
+	CVector* cvector = NULL;
+	size_t headerSize = sizeof(CVector);
+
+	//allocation
+	cvector = (CVector*)callbacks->allocate(headerSize + elementSize * initialSize);
+	memset(cvector, 0, headerSize + elementSize * initialSize);
+	cvector->allocation = elementSize * initialSize;
+	cvector->size = 0;
+	cvector->elementSize = elementSize;
+	cvector->staticSize = 0;
+	
+	cvector->callbacks.allocate = callbacks->allocate;
+	cvector->callbacks.reallocate = callbacks->reallocate;
+	cvector->callbacks.release = callbacks->release;
+
+	return (void*)(((size_t)cvector) + headerSize);
 }
 
-// resize the capacity of the vector
-void vector_resize(vector* v, size_t capacity)
-{
-    // attempt reallocation
-    void** items = realloc(v->items, sizeof(void *) * capacity);
-    
-    // if success
-    if(items != NULL)
-    {
-        // ensure vector items is pointing to the newly allocated memory
-        v->items = items;
-        // update vector's new capacity
-        v->capacity = capacity;
-    }
+void* vector_alloc_initial_capacity(size_t elementSize, size_t initialSize) {
+	AllocatorCallbacks callbacks = {
+		&malloc,
+		&realloc,
+		&free
+	};
+	return vector_alloc_initial_capacity_callbacks(elementSize, initialSize, &callbacks);
 }
 
-// free the memory used by the provided vector and reset capacity and size to 0
-void vector_free(vector* v)
-{
-    // free individual items
-    for(int i = 0; i < vector_size(v); i++)
-    {
-        free(v->items[i]);
-        v->items[i] = NULL;
-    }
 
-    // free the items array
-    free(v->items);
+void* vector_alloc_static(size_t elementSize, size_t elements) {
+	void* mem = vector_alloc_initial_capacity(elementSize, elements);
 
-    // reset vector variables
-    v->capacity = 0;
-    v->items = NULL;
-    v->size = 0;
+}
+void* vector_alloc(size_t elementSize) {
+	return vector_alloc_initial_capacity(elementSize, 1);
 }
 
-// alias of vector_free
-void vector_clear(vector* v)
-{ vector_free(v); }
-
-// push the provided item at the end of the provided vector
-size_t vector_push(vector* v, void* item)
-{
-    // do nothing if no item is provided
-    if(item == NULL) -1;
-
-    // determine if array needs to be resized
-    if(v->size + 1 > v->capacity)
-    {
-        // resize the array
-        if(v->capacity == 0)
-            vector_resize(v, 1);
-        else
-            vector_resize(v, v->capacity * 2);
-    }
-
-    // increment the size of the array
-    v->size++;
-    
-    // put the item at the end of the array
-    v->items[v->size-1] = item;
-    
-    // return the index of the pushed item
-    return v->size-1;
+void vector_free(void* vect) {
+	CVector* vector = (CVector*)((size_t)vect - sizeof(CVector));
+	vector->callbacks.release((void*)vector);
 }
 
-// set, at the provided index, the provided item into the provided vector
-void vector_set(vector* v, size_t index, void* item)
-{
-    // do nothing if no item is provided
-    if(item == NULL) return;
-    
-    // bounds sanity check
-    if(index >= 0 && index < v->size)
-    {
-        // put the item at the provided index
-        v->items[index] = item;
-    }
+void* _vector_push(void** vect) {
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)(((size_t)*vect) - headerSize);
+	void* back = NULL;
+	void* alloc = NULL;
+	size_t newAlloc = 0;
+	size_t allocated = vector->allocation / vector->elementSize;
+
+
+	if(vector->size == allocated && (!vector->staticSize)) {
+		// printf("Resize! (%li)\n", (vector->size*2));
+		newAlloc = vector->elementSize * vector->size * 2;
+		alloc = vector->callbacks.reallocate(vector, headerSize + newAlloc);
+		if(alloc) {
+			*vect = (void*)((size_t)alloc + headerSize);
+			vector = alloc;
+			vector->allocation = newAlloc;
+		} else {
+			assert("Couldn't resize the vector!" && 0);
+			free(vector);
+			return NULL;
+		}
+	}
+
+	size_t backIdx = vector->size;
+	vector->size++;
+
+	return (void*)((size_t)*vect + vector->elementSize*backIdx);
 }
 
-// get, from the provided index, the provided item from the provided vector
-void* vector_get(vector* v, size_t index)
-{
-    if(index >= 0 && index < v->size)
-        return v->items[index];
-    
-    return NULL;
+
+void vector_pop(void* vect){
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+
+	if(vector->size) {
+		vector->size--;
+	}
 }
 
-// delete the item at the provided index
-void vector_remove(vector* v, size_t index)
+size_t vector_size(void* vect)
 {
-    // bounds sanity check
-    if(index >= 0 && index < v->size)
-    {
-        // free the item's memory
-        free(v->items[index]);
-        
-        // set the item to NULL
-        v->items[index] = NULL;
-
-        // shift the rest of the array by 1
-        for(int i = index; i < v->size - 1; i++)
-        {
-            v->items[i] = v->items[i+1];
-            v->items[i+1] = NULL;
-        }
-        
-        // decrement the size of the array
-        v->size--;
-        
-        // if the size is low enough to resize the array
-        if(v->size > 0 && v->size < v->capacity / 4)
-            vector_resize(v, v->capacity / 2);
-    }
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return vector->size;
 }
 
-// get number of elements currently stored in the provided vector
-size_t vector_size(vector* v)
-{ return v->size; }
+//Just for the sake of formality
+void* vector_front(void* vect)
+{
+	return vect;
+}
 
+void* vector_back(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return (void*)((size_t)vect + (vector->size-1) * vector->elementSize);
+}
+
+size_t vector_element_size(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return vector->elementSize;
+}
+
+void* vector_at(void* vect, size_t index)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	return (void*)((size_t)vect + (vector->size - 1) * index);
+}
+
+void vector_clear(void* vect)
+{
+	size_t headerSize = sizeof(CVector);
+	CVector* vector = (CVector*)((size_t)vect - headerSize);
+	vector->size = 0;
+}
 
 olc_Pixel olc_PixelDefault()
 { return olc_PixelRAW(olc_nDefaultPixel); }
@@ -472,16 +464,8 @@ olc_Decal* olc_Renderable_GetDecal(olc_Renderable* renderable)
 #endif
     return renderable->decal;
 }
-
-olc_DecalInstance* olc_DecalInstance_Create()
+void olc_DecalInstance_Create(olc_DecalInstance* di)
 {
-    olc_DecalInstance* di = (olc_DecalInstance*)malloc(sizeof(olc_DecalInstance));
-    if(di == NULL)
-    {
-        fprintf(stderr, "Error create Decal Instance.\n");
-        exit(EXIT_FAILURE);
-    }
-
     di->decal = NULL;
 
     di->pos[0] = olc_VF2D(0.0f, 0.0f); di->pos[1] = olc_VF2D(0.0f, 0.0f);
@@ -492,8 +476,6 @@ olc_DecalInstance* olc_DecalInstance_Create()
 
     di->w[0] = di->w[1] = di->w[2] = di->w[3] = 1.0f;
     di->tint[0] = di->tint[1] = di->tint[2] = di->tint[3] = olc_WHITE;
-
-    return di;
 }
 
 void olc_DefaultState()
@@ -680,12 +662,11 @@ void SetScreenSize(int w, int h)
     PGE.vScreenSize.x = w;
     PGE.vScreenSize.y = h;
 
-    for(int i = 0; i < PGE.vLayers.size; i++)
+    for(int i = 0; i < vector_size(PGE.vLayers); i++)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
-        olc_Sprite_Destroy(ld->pDrawTarget);
-        ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
-        ld->bUpdate = true;
+        olc_Sprite_Destroy(PGE.vLayers[i].pDrawTarget);
+        PGE.vLayers[i].pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
+        PGE.vLayers[i].bUpdate = true;
     }
         
     SetDrawTarget(NULL);
@@ -702,8 +683,7 @@ void SetDrawTarget(olc_Sprite *target)
 {
     if(target == NULL)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, 0);
-        PGE.pDrawTarget = ld->pDrawTarget;
+        PGE.pDrawTarget = PGE.vLayers[0].pDrawTarget;
         PGE.nTargetLayer = 0;
     }
     else
@@ -1176,8 +1156,9 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     olc_vf2d vScreenSpaceDim;
     vScreenSpaceDim.x = vScreenSpacePos.x + (2.0f * ((float)(decal->sprite->width) * PGE.vInvScreenSize.x)) * scale.x;
     vScreenSpaceDim.y = vScreenSpacePos.y - (2.0f * ((float)(decal->sprite->height) * PGE.vInvScreenSize.y)) * scale.y;
-
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance_Create(di);
     
     di->decal = decal;
     
@@ -1187,11 +1168,6 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     di->pos[1] = olc_VF2D( vScreenSpacePos.x, vScreenSpaceDim.y );
     di->pos[2] = olc_VF2D( vScreenSpaceDim.x, vScreenSpaceDim.y );
     di->pos[3] = olc_VF2D( vScreenSpaceDim.x, vScreenSpacePos.y );
-
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
-    
 }
 
 // Draws a region of a decal, with optional scale and tinting
@@ -1207,7 +1183,8 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
         vScreenSpacePos.y - (2.0f * source_size.y * PGE.vInvScreenSize.y) * scale.y
     );
 
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
 
@@ -1222,9 +1199,6 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
     di->uv[0] = olc_VF2D( uvtl.x, uvtl.y ); di->uv[1] = olc_VF2D( uvtl.x, uvbr.y );
     di->uv[2] = olc_VF2D( uvbr.x, uvbr.y ); di->uv[3] = olc_VF2D( uvbr.x, uvtl.y );	
 
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
 }
 
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
@@ -1248,7 +1222,8 @@ void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_p
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
 
@@ -1265,15 +1240,12 @@ void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf
         di->pos[i] = olc_VF2D(di->pos[i].x * PGE.vInvScreenSize.x * 2.0f - 1.0f, di->pos[i].y * PGE.vInvScreenSize.y * 2.0f - 1.0f);
         di->pos[i].y *= -1.0f;
     }
-
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
 }
 
 void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    olc_DecalInstance* di = vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
 
@@ -1295,10 +1267,6 @@ void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle,
     
     di->uv[0] = olc_VF2D( uvtl.x, uvtl.y ); di->uv[1] = olc_VF2D( uvtl.x, uvbr.y );
     di->uv[2] = olc_VF2D( uvbr.x, uvbr.y ); di->uv[3] = olc_VF2D( uvbr.x, uvtl.y );	
-
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
 }
 
 // Draws a multiline string as a decal, with tiniting and scaling
@@ -1443,78 +1411,65 @@ void SetAppName(const char* title)
 // Layer targeting functions
 void SetLayerDrawTarget(uint8_t layer)
 {
-    olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-    PGE.pDrawTarget = ld->pDrawTarget;
-    ld->bUpdate = true;
+    PGE.pDrawTarget = PGE.vLayers[layer].pDrawTarget;
+    PGE.vLayers[layer].bUpdate = true;
     PGE.nTargetLayer = layer;
 }
 
 void EnableLayer(uint8_t layer, bool b)
 {
-    if(layer < PGE.vLayers.size)
-    {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->bShow = b;
-    }
+    if(layer < vector_size(PGE.vLayers))
+        PGE.vLayers[layer].bShow = b;
 }
 
 void SetLayerOffset(uint8_t layer, float x, float y)
 {
-    if(layer < PGE.vLayers.size)
+    if(layer < vector_size(PGE.vLayers))
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->vOffset.x = x;
-        ld->vOffset.y = y;
+        PGE.vLayers[layer].vOffset.x = x;
+        PGE.vLayers[layer].vOffset.y = y;
     }
 
 }
 
 void SetLayerScale(uint8_t layer, float x, float y)
 {
-    if(layer < PGE.vLayers.size)
+    if(layer < vector_size(PGE.vLayers))
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->vScale.x = x;
-        ld->vScale.y = y;
+        PGE.vLayers[layer].vScale.x = x;
+        PGE.vLayers[layer].vScale.y = y;
     }
 }
 
 void SetLayerTint(uint8_t layer, const olc_Pixel tint)
 {
-    if(layer < PGE.vLayers.size)
-    {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->tint = tint;
-    }
+    if(layer < vector_size(PGE.vLayers))
+        PGE.vLayers[layer].tint = tint;
 }
 
 void SetLayerCustomRenderFunction(uint8_t layer, void (*f)())
 {
-    if(layer < PGE.vLayers.size)
-    {
-        olc_LayerDesc* ld = vector_get(&PGE.vLayers, layer);
-        ld->funcHook = f;
-    }
+    if(layer < vector_size(PGE.vLayers))
+        PGE.vLayers[layer].funcHook = f;
 }
 
-vector GetLayers()
+olc_LayerDesc* GetLayers()
 { return PGE.vLayers; }
 
 uint32_t CreateLayer()
 {
-    olc_LayerDesc* ld = (olc_LayerDesc*)malloc(sizeof(olc_LayerDesc));
+    olc_LayerDesc* ld = vector_push(PGE.vLayers);
     
     ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->tint = olc_WHITE;
     ld->funcHook = NULL;
 
-    vector_init(&ld->vecDecalInstance);
+    ld->vecDecalInstance = vector_type_alloc(olc_DecalInstance);
+
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
     
-    vector_push(&PGE.vLayers, ld);
-    
-    return (uint32_t)(PGE.vLayers.size - 1);
+    return (uint32_t)(vector_size(PGE.vLayers) - 1);
 }
 
 // Change the pixel mode for different optimisations
@@ -1729,15 +1684,14 @@ void olc_PGE_CoreUpdate()
     olc_Renderer_ClearBuffer(olc_BLACK, true);
 
     // Layer 0
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
-    ld->bUpdate = true;
-    ld->bShow = true;
+    PGE.vLayers[0].bUpdate = true;
+    PGE.vLayers[0].bShow = true;
 
     olc_Renderer_PrepareDrawing();
 
-    for(int i = PGE.vLayers.size-1; i >= 0; i--)
+    for(int i = vector_size(PGE.vLayers)-1; i >= 0; i--)
     {
-        olc_LayerDesc* layer = vector_get(&PGE.vLayers, i);
+        olc_LayerDesc* layer = &PGE.vLayers[i];
         if(layer->bShow)
         {
             if(layer->funcHook == NULL)
@@ -1752,14 +1706,13 @@ void olc_PGE_CoreUpdate()
                 olc_Renderer_DrawLayerQuad(layer->vOffset, layer->vScale, layer->tint);
 
                 // Display Decals in order for this layer
-                for(int j = 0; j < layer->vecDecalInstance.size; j++)
+                for(int j = 0; j < vector_size(layer->vecDecalInstance); j++)
                 {
-                    olc_DecalInstance* decal = vector_get(&layer->vecDecalInstance, j);
-                    olc_Renderer_DrawDecalQuad(decal);
+                    olc_Renderer_DrawDecalQuad(&layer->vecDecalInstance[j]);
                 }
 
                 // clear the instances
-                vector_clear(&layer->vecDecalInstance);
+                vector_clear(layer->vecDecalInstance);
             }
             else
             {
@@ -1793,14 +1746,13 @@ void olc_PGE_PrepareEngine()
     if(olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
 
     // Initialize Layer Vector
-    vector_init(&PGE.vLayers);
-    
+    PGE.vLayers = vector_type_alloc(olc_LayerDesc);
+
     // Create Primary Layer "0"
     CreateLayer();
 
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
-    ld->bUpdate = true;
-    ld->bShow = true;
+    PGE.vLayers[0].bUpdate = true;
+    PGE.vLayers[0].bShow = true;
     SetDrawTarget(NULL);
 
     // Construct default font sheet
@@ -1828,88 +1780,24 @@ void olc_PGE_Terminate()
 
 // RENDERER
 
-void texturemap_init(vector* v)
-{
-    vector_init(v);
-}
-
-void texturemap_destroy(vector* v)
-{
-    vector_free(v);
-}
-
-void texturemap_delete(vector* v, int id)
-{
-    for(int i = 0; i < v->size; i++)
-    {
-        texturedata* temp = (texturedata*)vector_get(v, i);
-        if(id == temp->id)
-        {
-            SDL_DestroyTexture(temp->t);
-            temp->t = NULL;
-            vector_remove(v, i);
-            return;
-        }
-    }
-}
-
-SDL_Texture* texturemap_get(vector* v, int id)
-{
-    for(int i = 0; i < v->size; i++)
-    {
-        texturedata* temp = (texturedata*)vector_get(v, i);
-        if(id == temp->id)
-            return temp->t;
-    }
-   
-    return 0;
-}
-
-void texturemap_set(vector* v, int id, SDL_Texture* texture)
-{
-    // check if key already exists
-    for(int i = 0; i < v->size; i++)
-    {
-        texturedata* temp = (texturedata*)vector_get(v, i);
-        if(id == temp->id)
-        {
-            temp->t = texture;
-            return;
-        }
-    }
-
-    // if we made it here, we have to create a new inputdata
-    texturedata* temp = (texturedata*)malloc(sizeof(texturedata));
-    if(temp == NULL)
-    {
-        fprintf(stderr, "Failed to allocate memory.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    // set data
-    temp->id = id;
-    temp->t = texture;
-
-    // push into vector
-    vector_push(v, temp);
-}
 
 void olc_Renderer_PrepareDevice()
 {}
 
 int32_t olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC)
 {
-    texturemap_init(&mapTextures);
+    vTextures = vector_type_alloc(SDL_Texture*);
     return olc_RCODE_OK;
 }
 
 int32_t olc_Renderer_DestroyDevice()
 {
-    for(int i = 0; i < mapTextures.size; i++)
+    for(size_t i = 0; i < vector_size(vTextures); i++)
     {
-        texturemap_delete(&mapTextures, i);
+        SDL_DestroyTexture(vTextures[i]);
+        vTextures[i] = NULL;
     }
-    texturemap_destroy(&mapTextures);
+    vector_free(vTextures);
     return olc_RCODE_OK;
 }
 
@@ -1923,14 +1811,12 @@ void olc_Renderer_PrepareDrawing()
 
 void olc_Renderer_DrawLayerQuad(olc_vf2d offset, olc_vf2d scale, const olc_Pixel tint)
 {
-    SDL_Texture* texture = texturemap_get(&mapTextures, nActiveTexture);
-
     // Apply Tint
-    SDL_SetTextureColorMod(texture, tint.r, tint.g, tint.b);
-    SDL_SetTextureAlphaMod(texture, tint.a);
+    SDL_SetTextureColorMod(vTextures[nActiveTexture], tint.r, tint.g, tint.b);
+    SDL_SetTextureAlphaMod(vTextures[nActiveTexture], tint.a);
 
     // Draw Texture
-    SDL_RenderCopy(olc_Renderer, texture, NULL, NULL);
+    SDL_RenderCopy(olc_Renderer, vTextures[nActiveTexture], NULL, NULL);
 }
 
 // Locally used functions to convert OpenGL to Screen Coords
@@ -1986,8 +1872,6 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     float fAngle;
     olc_vf2d vSize;
 
-    SDL_Texture* texture = texturemap_get(&mapTextures, decal->decal->id);
-    
     // convert decal positions to screen space
     olc_vf2d pos[4] = {
         PointToScreen(decal->pos[0]),
@@ -2021,37 +1905,61 @@ void olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal)
     SDL_Point center; center.x = 0; center.y = 0;
 
     // Apply Tint
-    SDL_SetTextureColorMod(texture, decal->tint[0].r, decal->tint[0].g, decal->tint[0].b);
-    SDL_SetTextureAlphaMod(texture, decal->tint[0].a);
+    SDL_SetTextureColorMod(vTextures[decal->decal->id], decal->tint[0].r, decal->tint[0].g, decal->tint[0].b);
+    SDL_SetTextureAlphaMod(vTextures[decal->decal->id], decal->tint[0].a);
     
     // Draw Texture
-    SDL_RenderCopyEx(olc_Renderer, texture, &src, &dest, fAngle, &center, SDL_FLIP_NONE);
+    SDL_RenderCopyEx(olc_Renderer, vTextures[decal->decal->id], &src, &dest, fAngle, &center, SDL_FLIP_NONE);
 }
 
 uint32_t olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height)
 {
+    // reuse empty slots from deleted textures
+    if(nOpenSlot > 0)
+    {
+        for(size_t i = 0; i < vector_size(vTextures); i++)
+        {
+            if(vTextures[i] == NULL)
+            {
+                nOpenSlot--;
+                vTextures[i] = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+                if(vTextures[i] == NULL)
+                {
+                    fprintf(stderr, "Failed to create texture.\n");
+                    exit(EXIT_FAILURE);
+                }
+                SDL_SetTextureBlendMode(vTextures[i], SDL_BLENDMODE_BLEND);
+                return i;
+            }
+        }
+    }
+
     int id = nTextureID++;
-    SDL_Texture* texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
-    if(texture == NULL)
+    SDL_Texture** texture = vector_push(vTextures);
+    *texture = SDL_CreateTexture(olc_Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+    if(*texture == NULL)
     {
         fprintf(stderr, "Failed to create texture.\n");
         exit(EXIT_FAILURE);
     }
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    texturemap_set(&mapTextures, id, texture);
-
+    SDL_SetTextureBlendMode(*texture, SDL_BLENDMODE_BLEND);
+    
     return id;
 }
 
 void olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr)
 {
-    SDL_Texture* texture = texturemap_get(&mapTextures, id);
-    SDL_UpdateTexture(texture, NULL, (void*)olc_Sprite_GetData(spr), spr->width * 4);
+    SDL_UpdateTexture(vTextures[id], NULL, (void*)olc_Sprite_GetData(spr), spr->width * 4);
 }
 
 uint32_t olc_Renderer_DeleteTexture(const uint32_t id)
 {
-    texturemap_delete(&mapTextures, id);
+    if(vTextures[id] != NULL)
+    {
+        SDL_DestroyTexture(vTextures[id]);
+        vTextures[id] = NULL;
+        nOpenSlot++;
+    }
     return id;
 }
 
@@ -2078,68 +1986,48 @@ void olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
 // PLATFORM
 
 
-void inputmap_init(vector* v)
+void inputmap_init()
 {
-    vector_init(v);
-}
-
-void inputmap_destroy(vector* v)
-{
-    vector_free(v);
-}
-
-void inputmap_delete(vector* v, size_t key)
-{
-    for(int i = 0; i < v->size; i++)
+    for(int i = 0; i < 256; i++)
     {
-        inputdata* temp = (inputdata*)vector_get(v, i);
-        if(key == temp->key)
-        {
-            vector_remove(v, i);
-            return;
-        }
+        mapKeys[i].key = -1;
+        mapKeys[i].val = 0;
     }
 }
 
-uint8_t inputmap_get(vector* v, size_t key)
+uint8_t inputmap_get(size_t key)
 {
-    for(int i = 0; i < v->size; i++)
+    for(int i = 0; i < 256; i++)
     {
-        inputdata* temp = (inputdata*)vector_get(v, i);
-        if(key == temp->key)
-            return temp->val;
+        if(mapKeys[i].key == key)
+            return mapKeys[i].val;
     }
    
     return 0;
 }
 
-void inputmap_set(vector* v, size_t key, uint8_t val)
+void inputmap_set(size_t key, uint8_t val)
 {
-    // check if key already exists
-    for(int i = 0; i < v->size; i++)
+    for(int i = 0; i < 256; i++)
     {
-        inputdata* temp = (inputdata*)vector_get(v, i);
-        if(key == temp->key)
+        if(mapKeys[i].key == key)
         {
-            temp->val = val;
+            mapKeys[i].val = val;
             return;
         }
     }
 
     // if we made it here, we have to create a new inputdata
-    inputdata* temp = (inputdata*)malloc(sizeof(inputdata));
-    if(temp == NULL)
+    for(int i = 0; i < 256; i++)
     {
-        fprintf(stderr, "Failed to allocate memory.\n");
-        exit(EXIT_FAILURE);
+        if(mapKeys[i].key == -1 && mapKeys[i].val == 0)
+        {
+            mapKeys[i].key = key;
+            mapKeys[i].val = val;
+            return;
+        }
     }
-    
-    // set data
-    temp->key = key;
-    temp->val = val;
 
-    // push into vector
-    vector_push(v, temp);    
 }
 
 int32_t olc_Platform_ApplicationStartUp()
@@ -2147,18 +2035,17 @@ int32_t olc_Platform_ApplicationStartUp()
 
 int32_t olc_Platform_ApplicationCleanUp()
 {
-    for(size_t i = 0; i < PGE.vLayers.size; i++)
+    for(size_t i = 0; i < vector_size(PGE.vLayers); i++)
     {
-        olc_LayerDesc* layer = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
-        vector_clear(&layer->vecDecalInstance);
+        vector_clear(PGE.vLayers[i].vecDecalInstance);
+        vector_free(PGE.vLayers[i].vecDecalInstance);
     }
-    vector_clear(&PGE.vLayers);
+    vector_clear(PGE.vLayers);
+    vector_free(PGE.vLayers);
 
     olc_PGE_DestroyFontSheet();
     olc_Sprite_Destroy(PGE.pDrawTarget);
     free(PGE.sAppName);
-    
-    inputmap_destroy(&mapKeys);
     
     SDL_DestroyRenderer(olc_Renderer);
     SDL_DestroyWindow(olc_Window);
@@ -2200,58 +2087,58 @@ int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindo
     SDL_SetWindowResizable(olc_Window, SDL_TRUE);
     SDL_SetWindowFullscreen(olc_Window, (bFullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0 );
 
-    inputmap_init(&mapKeys);
+    inputmap_init();
     
-    inputmap_set(&mapKeys, SDLK_UNKNOWN, olc_NONE);
-    inputmap_set(&mapKeys, SDLK_a, olc_A); inputmap_set(&mapKeys, SDLK_b, olc_B);
-    inputmap_set(&mapKeys, SDLK_c, olc_C); inputmap_set(&mapKeys, SDLK_d, olc_D);
-    inputmap_set(&mapKeys, SDLK_e, olc_E); inputmap_set(&mapKeys, SDLK_f, olc_F);
-    inputmap_set(&mapKeys, SDLK_g, olc_G); inputmap_set(&mapKeys, SDLK_h, olc_H);
-    inputmap_set(&mapKeys, SDLK_i, olc_I); inputmap_set(&mapKeys, SDLK_j, olc_J);
-    inputmap_set(&mapKeys, SDLK_k, olc_K); inputmap_set(&mapKeys, SDLK_l, olc_L);
-    inputmap_set(&mapKeys, SDLK_m, olc_M); inputmap_set(&mapKeys, SDLK_n, olc_N);
-    inputmap_set(&mapKeys, SDLK_o, olc_O); inputmap_set(&mapKeys, SDLK_p, olc_P);
-    inputmap_set(&mapKeys, SDLK_q, olc_Q); inputmap_set(&mapKeys, SDLK_r, olc_R);
-    inputmap_set(&mapKeys, SDLK_s, olc_S); inputmap_set(&mapKeys, SDLK_t, olc_T);
-    inputmap_set(&mapKeys, SDLK_u, olc_U); inputmap_set(&mapKeys, SDLK_v, olc_V);
-    inputmap_set(&mapKeys, SDLK_w, olc_W); inputmap_set(&mapKeys, SDLK_x, olc_X);
-    inputmap_set(&mapKeys, SDLK_y, olc_Y); inputmap_set(&mapKeys, SDLK_z, olc_Z);
+    inputmap_set(SDLK_UNKNOWN, olc_NONE);
+    inputmap_set(SDLK_a, olc_A); inputmap_set(SDLK_b, olc_B);
+    inputmap_set(SDLK_c, olc_C); inputmap_set(SDLK_d, olc_D);
+    inputmap_set(SDLK_e, olc_E); inputmap_set(SDLK_f, olc_F);
+    inputmap_set(SDLK_g, olc_G); inputmap_set(SDLK_h, olc_H);
+    inputmap_set(SDLK_i, olc_I); inputmap_set(SDLK_j, olc_J);
+    inputmap_set(SDLK_k, olc_K); inputmap_set(SDLK_l, olc_L);
+    inputmap_set(SDLK_m, olc_M); inputmap_set(SDLK_n, olc_N);
+    inputmap_set(SDLK_o, olc_O); inputmap_set(SDLK_p, olc_P);
+    inputmap_set(SDLK_q, olc_Q); inputmap_set(SDLK_r, olc_R);
+    inputmap_set(SDLK_s, olc_S); inputmap_set(SDLK_t, olc_T);
+    inputmap_set(SDLK_u, olc_U); inputmap_set(SDLK_v, olc_V);
+    inputmap_set(SDLK_w, olc_W); inputmap_set(SDLK_x, olc_X);
+    inputmap_set(SDLK_y, olc_Y); inputmap_set(SDLK_z, olc_Z);
     
-    inputmap_set(&mapKeys, SDLK_0, olc_K0); inputmap_set(&mapKeys, SDLK_1, olc_K1); 
-    inputmap_set(&mapKeys, SDLK_2, olc_K2); inputmap_set(&mapKeys, SDLK_3, olc_K3);
-    inputmap_set(&mapKeys, SDLK_4, olc_K4); inputmap_set(&mapKeys, SDLK_5, olc_K5); 
-    inputmap_set(&mapKeys, SDLK_6, olc_K6); inputmap_set(&mapKeys, SDLK_7, olc_K7);
-    inputmap_set(&mapKeys, SDLK_8, olc_K8); inputmap_set(&mapKeys, SDLK_9, olc_K9);
+    inputmap_set(SDLK_0, olc_K0); inputmap_set(SDLK_1, olc_K1); 
+    inputmap_set(SDLK_2, olc_K2); inputmap_set(SDLK_3, olc_K3);
+    inputmap_set(SDLK_4, olc_K4); inputmap_set(SDLK_5, olc_K5); 
+    inputmap_set(SDLK_6, olc_K6); inputmap_set(SDLK_7, olc_K7);
+    inputmap_set(SDLK_8, olc_K8); inputmap_set(SDLK_9, olc_K9);
 
-    inputmap_set(&mapKeys, SDLK_F1,  olc_F1);  inputmap_set(&mapKeys, SDLK_F2,  olc_F2);
-    inputmap_set(&mapKeys, SDLK_F3,  olc_F3);  inputmap_set(&mapKeys, SDLK_F4,  olc_F4);
-    inputmap_set(&mapKeys, SDLK_F5,  olc_F5);  inputmap_set(&mapKeys, SDLK_F6,  olc_F6);
-    inputmap_set(&mapKeys, SDLK_F7,  olc_F7);  inputmap_set(&mapKeys, SDLK_F8,  olc_F8);
-    inputmap_set(&mapKeys, SDLK_F9,  olc_F9);  inputmap_set(&mapKeys, SDLK_F10, olc_F10);
-    inputmap_set(&mapKeys, SDLK_F11, olc_F11); inputmap_set(&mapKeys, SDLK_F12, olc_F12);
+    inputmap_set(SDLK_F1,  olc_F1);  inputmap_set(SDLK_F2,  olc_F2);
+    inputmap_set(SDLK_F3,  olc_F3);  inputmap_set(SDLK_F4,  olc_F4);
+    inputmap_set(SDLK_F5,  olc_F5);  inputmap_set(SDLK_F6,  olc_F6);
+    inputmap_set(SDLK_F7,  olc_F7);  inputmap_set(SDLK_F8,  olc_F8);
+    inputmap_set(SDLK_F9,  olc_F9);  inputmap_set(SDLK_F10, olc_F10);
+    inputmap_set(SDLK_F11, olc_F11); inputmap_set(SDLK_F12, olc_F12);
 
-    inputmap_set(&mapKeys, SDLK_DOWN,       olc_DOWN);   inputmap_set(&mapKeys, SDLK_LEFT,   olc_LEFT);
-    inputmap_set(&mapKeys, SDLK_RIGHT,      olc_RIGHT);  inputmap_set(&mapKeys, SDLK_UP,     olc_UP);
-    inputmap_set(&mapKeys, SDLK_KP_ENTER,   olc_ENTER);  inputmap_set(&mapKeys, SDLK_RETURN, olc_ENTER);
-    inputmap_set(&mapKeys, SDLK_BACKSPACE,  olc_BACK);   inputmap_set(&mapKeys, SDLK_ESCAPE, olc_ESCAPE);
-    inputmap_set(&mapKeys, SDLK_RETURN,     olc_ENTER);  inputmap_set(&mapKeys, SDLK_PAUSE,  olc_PAUSE);
-    inputmap_set(&mapKeys, SDLK_SCROLLLOCK, olc_SCROLL); inputmap_set(&mapKeys, SDLK_TAB,    olc_TAB);
-    inputmap_set(&mapKeys, SDLK_DELETE,     olc_DEL);    inputmap_set(&mapKeys, SDLK_HOME,   olc_HOME);
-    inputmap_set(&mapKeys, SDLK_END,        olc_END);    inputmap_set(&mapKeys, SDLK_PAGEUP, olc_PGUP);
-    inputmap_set(&mapKeys, SDLK_PAGEDOWN,   olc_PGDN);   inputmap_set(&mapKeys, SDLK_INSERT, olc_INS);
-    inputmap_set(&mapKeys, SDLK_LSHIFT,     olc_SHIFT);  inputmap_set(&mapKeys, SDLK_RSHIFT, olc_SHIFT);
-    inputmap_set(&mapKeys, SDLK_LCTRL,      olc_CTRL);   inputmap_set(&mapKeys, SDLK_RCTRL,  olc_CTRL);
-    inputmap_set(&mapKeys, SDLK_SPACE,      olc_SPACE);
+    inputmap_set(SDLK_DOWN,       olc_DOWN);   inputmap_set(SDLK_LEFT,   olc_LEFT);
+    inputmap_set(SDLK_RIGHT,      olc_RIGHT);  inputmap_set(SDLK_UP,     olc_UP);
+    inputmap_set(SDLK_KP_ENTER,   olc_ENTER);  inputmap_set(SDLK_RETURN, olc_ENTER);
+    inputmap_set(SDLK_BACKSPACE,  olc_BACK);   inputmap_set(SDLK_ESCAPE, olc_ESCAPE);
+    inputmap_set(SDLK_RETURN,     olc_ENTER);  inputmap_set(SDLK_PAUSE,  olc_PAUSE);
+    inputmap_set(SDLK_SCROLLLOCK, olc_SCROLL); inputmap_set(SDLK_TAB,    olc_TAB);
+    inputmap_set(SDLK_DELETE,     olc_DEL);    inputmap_set(SDLK_HOME,   olc_HOME);
+    inputmap_set(SDLK_END,        olc_END);    inputmap_set(SDLK_PAGEUP, olc_PGUP);
+    inputmap_set(SDLK_PAGEDOWN,   olc_PGDN);   inputmap_set(SDLK_INSERT, olc_INS);
+    inputmap_set(SDLK_LSHIFT,     olc_SHIFT);  inputmap_set(SDLK_RSHIFT, olc_SHIFT);
+    inputmap_set(SDLK_LCTRL,      olc_CTRL);   inputmap_set(SDLK_RCTRL,  olc_CTRL);
+    inputmap_set(SDLK_SPACE,      olc_SPACE);
 
-    inputmap_set(&mapKeys, SDLK_KP_0, olc_NP0); inputmap_set(&mapKeys, SDLK_KP_1, olc_NP1);
-    inputmap_set(&mapKeys, SDLK_KP_2, olc_NP2); inputmap_set(&mapKeys, SDLK_KP_3, olc_NP3);
-    inputmap_set(&mapKeys, SDLK_KP_4, olc_NP4); inputmap_set(&mapKeys, SDLK_KP_5, olc_NP5);
-    inputmap_set(&mapKeys, SDLK_KP_6, olc_NP6); inputmap_set(&mapKeys, SDLK_KP_7, olc_NP7);
-    inputmap_set(&mapKeys, SDLK_KP_8, olc_NP8); inputmap_set(&mapKeys, SDLK_KP_9, olc_NP9);
+    inputmap_set(SDLK_KP_0, olc_NP0); inputmap_set(SDLK_KP_1, olc_NP1);
+    inputmap_set(SDLK_KP_2, olc_NP2); inputmap_set(SDLK_KP_3, olc_NP3);
+    inputmap_set(SDLK_KP_4, olc_NP4); inputmap_set(SDLK_KP_5, olc_NP5);
+    inputmap_set(SDLK_KP_6, olc_NP6); inputmap_set(SDLK_KP_7, olc_NP7);
+    inputmap_set(SDLK_KP_8, olc_NP8); inputmap_set(SDLK_KP_9, olc_NP9);
 
-    inputmap_set(&mapKeys, SDLK_KP_MULTIPLY, olc_NP_MUL); inputmap_set(&mapKeys, SDLK_KP_DIVIDE, olc_NP_DIV);
-    inputmap_set(&mapKeys, SDLK_KP_PLUS, olc_NP_ADD); inputmap_set(&mapKeys, SDLK_KP_MINUS, olc_NP_SUB);
-    inputmap_set(&mapKeys, SDLK_KP_PERIOD, olc_NP_DECIMAL); inputmap_set(&mapKeys, SDLK_PERIOD, olc_PERIOD);
+    inputmap_set(SDLK_KP_MULTIPLY, olc_NP_MUL); inputmap_set(SDLK_KP_DIVIDE, olc_NP_DIV);
+    inputmap_set(SDLK_KP_PLUS, olc_NP_ADD); inputmap_set(SDLK_KP_MINUS, olc_NP_SUB);
+    inputmap_set(SDLK_KP_PERIOD, olc_NP_DECIMAL); inputmap_set(SDLK_PERIOD, olc_PERIOD);
 
     return olc_RCODE_OK;
 }
@@ -2294,11 +2181,11 @@ int32_t olc_Platform_HandleSystemEvent()
         }
         else if(event.type == SDL_KEYDOWN)
         {
-            olc_PGE_UpdateKeyState(inputmap_get(&mapKeys, event.key.keysym.sym), true);
+            olc_PGE_UpdateKeyState(inputmap_get(event.key.keysym.sym), true);
         }
         else if(event.type == SDL_KEYUP)
         {
-            olc_PGE_UpdateKeyState(inputmap_get(&mapKeys, event.key.keysym.sym), false);
+            olc_PGE_UpdateKeyState(inputmap_get(event.key.keysym.sym), false);
         }
         else if(event.type == SDL_MOUSEBUTTONDOWN)
         {
