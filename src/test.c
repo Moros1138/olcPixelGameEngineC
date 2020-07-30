@@ -25,6 +25,7 @@ bool OnUserCreate()
     DrawString(20,  4, "4", olc_WHITE, 1);
 
     SetDrawTarget(NULL);
+    olc_Sprite_Destroy(sprite);
     sprite = olc_Sprite_LoadFromPGESprFile("test.spr");
     decal = olc_Decal_Create(sprite);
 

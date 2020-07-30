@@ -475,6 +475,7 @@ void olc_PGE_UpdateMouseWheel(int32_t delta);
 void olc_PGE_UpdateWindowSize(int32_t x, int32_t y);
 void olc_PGE_UpdateViewport();
 void olc_PGE_ConstructFontSheet();
+void olc_PGE_DestroyFontSheet();
 void olc_PGE_CoreUpdate();
 void olc_PGE_PrepareEngine();
 void olc_PGE_UpdateMouseState(int32_t button, bool state);
