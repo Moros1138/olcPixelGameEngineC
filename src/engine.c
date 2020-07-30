@@ -606,16 +606,8 @@ olc_Decal* olc_Renderable_GetDecal(olc_Renderable* renderable)
 #endif
     return renderable->decal;
 }
-
-olc_DecalInstance* olc_DecalInstance_Create()
+void olc_DecalInstance_Create(olc_DecalInstance* di)
 {
-    olc_DecalInstance* di = (olc_DecalInstance*)malloc(sizeof(olc_DecalInstance));
-    if(di == NULL)
-    {
-        fprintf(stderr, "Error create Decal Instance.\n");
-        exit(EXIT_FAILURE);
-    }
-
     di->decal = NULL;
 
     di->pos[0] = olc_VF2D(0.0f, 0.0f); di->pos[1] = olc_VF2D(0.0f, 0.0f);
@@ -626,8 +618,6 @@ olc_DecalInstance* olc_DecalInstance_Create()
 
     di->w[0] = di->w[1] = di->w[2] = di->w[3] = 1.0f;
     di->tint[0] = di->tint[1] = di->tint[2] = di->tint[3] = olc_WHITE;
-
-    return di;
 }
 
 void olc_DefaultState()
@@ -1310,8 +1300,10 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     olc_vf2d vScreenSpaceDim;
     vScreenSpaceDim.x = vScreenSpacePos.x + (2.0f * ((float)(decal->sprite->width) * PGE.vInvScreenSize.x)) * scale.x;
     vScreenSpaceDim.y = vScreenSpacePos.y - (2.0f * ((float)(decal->sprite->height) * PGE.vInvScreenSize.y)) * scale.y;
-
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance_Create(di);
     
     di->decal = decal;
     
@@ -1322,10 +1314,6 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     di->pos[2] = olc_VF2D( vScreenSpaceDim.x, vScreenSpaceDim.y );
     di->pos[3] = olc_VF2D( vScreenSpaceDim.x, vScreenSpacePos.y );
 
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
-    
 }
 
 // Draws a region of a decal, with optional scale and tinting
@@ -1341,7 +1329,9 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
         vScreenSpacePos.y - (2.0f * source_size.y * PGE.vInvScreenSize.y) * scale.y
     );
 
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
 
@@ -1356,9 +1346,6 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
     di->uv[0] = olc_VF2D( uvtl.x, uvtl.y ); di->uv[1] = olc_VF2D( uvtl.x, uvbr.y );
     di->uv[2] = olc_VF2D( uvbr.x, uvbr.y ); di->uv[3] = olc_VF2D( uvbr.x, uvtl.y );	
 
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
 }
 
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
@@ -1382,7 +1369,9 @@ void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_p
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
 
@@ -1399,15 +1388,13 @@ void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf
         di->pos[i] = olc_VF2D(di->pos[i].x * PGE.vInvScreenSize.x * 2.0f - 1.0f, di->pos[i].y * PGE.vInvScreenSize.y * 2.0f - 1.0f);
         di->pos[i].y *= -1.0f;
     }
-
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
 }
 
 void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = olc_DecalInstance_Create();
+    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
+    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
 
@@ -1429,10 +1416,6 @@ void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle,
     
     di->uv[0] = olc_VF2D( uvtl.x, uvtl.y ); di->uv[1] = olc_VF2D( uvtl.x, uvbr.y );
     di->uv[2] = olc_VF2D( uvbr.x, uvbr.y ); di->uv[3] = olc_VF2D( uvbr.x, uvtl.y );	
-
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    if(ld != NULL)
-        vector_push(&ld->vecDecalInstance, di);
 }
 
 // Draws a multiline string as a decal, with tiniting and scaling
@@ -1643,7 +1626,8 @@ uint32_t CreateLayer()
     ld->tint = olc_WHITE;
     ld->funcHook = NULL;
 
-    vector_init(&ld->vecDecalInstance);
+    ld->vecDecalInstance = cvector_type_alloc(olc_DecalInstance);
+
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
     
     vector_push(&PGE.vLayers, ld);
@@ -1886,14 +1870,13 @@ void olc_PGE_CoreUpdate()
                 olc_Renderer_DrawLayerQuad(layer->vOffset, layer->vScale, layer->tint);
 
                 // Display Decals in order for this layer
-                for(int j = 0; j < layer->vecDecalInstance.size; j++)
+                for(int j = 0; j < cvector_size(layer->vecDecalInstance); j++)
                 {
-                    olc_DecalInstance* decal = vector_get(&layer->vecDecalInstance, j);
-                    olc_Renderer_DrawDecalQuad(decal);
+                    olc_Renderer_DrawDecalQuad(&layer->vecDecalInstance[j]);
                 }
 
                 // clear the instances
-                vector_clear(&layer->vecDecalInstance);
+                cvector_clear(layer->vecDecalInstance);
             }
             else
             {
@@ -2220,7 +2203,8 @@ int32_t olc_Platform_ApplicationCleanUp()
     for(size_t i = 0; i < PGE.vLayers.size; i++)
     {
         olc_LayerDesc* layer = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
-        vector_clear(&layer->vecDecalInstance);
+        cvector_clear(layer->vecDecalInstance);
+        cvector_free(layer->vecDecalInstance);
     }
     vector_clear(&PGE.vLayers);
 

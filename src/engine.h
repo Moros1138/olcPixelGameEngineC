@@ -276,7 +276,7 @@ typedef struct DecalInstance
     olc_Pixel tint[4];
 } olc_DecalInstance;
 
-olc_DecalInstance* olc_DecalInstance_Create();
+void olc_DecalInstance_Create(olc_DecalInstance* di);
 
 // NOT IMPLEMENTED - Here for Reasons
 typedef struct DecalTriangleInstance
@@ -295,7 +295,7 @@ typedef struct LayerDesc
     bool bUpdate;
     olc_Sprite* pDrawTarget;
     uint32_t nResID;
-    vector vecDecalInstance;
+    olc_DecalInstance* vecDecalInstance;
     olc_Pixel tint;
     void (*funcHook)();
 } olc_LayerDesc;
