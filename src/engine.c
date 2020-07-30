@@ -2168,68 +2168,48 @@ void olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
 // PLATFORM
 
 
-void inputmap_init(vector* v)
+void inputmap_init()
 {
-    vector_init(v);
-}
-
-void inputmap_destroy(vector* v)
-{
-    vector_free(v);
-}
-
-void inputmap_delete(vector* v, size_t key)
-{
-    for(int i = 0; i < v->size; i++)
+    for(int i = 0; i < 256; i++)
     {
-        inputdata* temp = (inputdata*)vector_get(v, i);
-        if(key == temp->key)
-        {
-            vector_remove(v, i);
-            return;
-        }
+        mapKeys[i].key = -1;
+        mapKeys[i].val = 0;
     }
 }
 
-uint8_t inputmap_get(vector* v, size_t key)
+uint8_t inputmap_get(size_t key)
 {
-    for(int i = 0; i < v->size; i++)
+    for(int i = 0; i < 256; i++)
     {
-        inputdata* temp = (inputdata*)vector_get(v, i);
-        if(key == temp->key)
-            return temp->val;
+        if(mapKeys[i].key == key)
+            return mapKeys[i].val;
     }
    
     return 0;
 }
 
-void inputmap_set(vector* v, size_t key, uint8_t val)
+void inputmap_set(size_t key, uint8_t val)
 {
-    // check if key already exists
-    for(int i = 0; i < v->size; i++)
+    for(int i = 0; i < 256; i++)
     {
-        inputdata* temp = (inputdata*)vector_get(v, i);
-        if(key == temp->key)
+        if(mapKeys[i].key == key)
         {
-            temp->val = val;
+            mapKeys[i].val = val;
             return;
         }
     }
 
     // if we made it here, we have to create a new inputdata
-    inputdata* temp = (inputdata*)malloc(sizeof(inputdata));
-    if(temp == NULL)
+    for(int i = 0; i < 256; i++)
     {
-        fprintf(stderr, "Failed to allocate memory.\n");
-        exit(EXIT_FAILURE);
+        if(mapKeys[i].key == -1 && mapKeys[i].val == 0)
+        {
+            mapKeys[i].key = key;
+            mapKeys[i].val = val;
+            return;
+        }
     }
-    
-    // set data
-    temp->key = key;
-    temp->val = val;
 
-    // push into vector
-    vector_push(v, temp);    
 }
 
 int32_t olc_Platform_ApplicationStartUp()
@@ -2247,8 +2227,6 @@ int32_t olc_Platform_ApplicationCleanUp()
     olc_PGE_DestroyFontSheet();
     olc_Sprite_Destroy(PGE.pDrawTarget);
     free(PGE.sAppName);
-    
-    inputmap_destroy(&mapKeys);
     
     SDL_DestroyRenderer(olc_Renderer);
     SDL_DestroyWindow(olc_Window);
@@ -2290,58 +2268,58 @@ int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindo
     SDL_SetWindowResizable(olc_Window, SDL_TRUE);
     SDL_SetWindowFullscreen(olc_Window, (bFullScreen) ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0 );
 
-    inputmap_init(&mapKeys);
+    inputmap_init();
     
-    inputmap_set(&mapKeys, SDLK_UNKNOWN, olc_NONE);
-    inputmap_set(&mapKeys, SDLK_a, olc_A); inputmap_set(&mapKeys, SDLK_b, olc_B);
-    inputmap_set(&mapKeys, SDLK_c, olc_C); inputmap_set(&mapKeys, SDLK_d, olc_D);
-    inputmap_set(&mapKeys, SDLK_e, olc_E); inputmap_set(&mapKeys, SDLK_f, olc_F);
-    inputmap_set(&mapKeys, SDLK_g, olc_G); inputmap_set(&mapKeys, SDLK_h, olc_H);
-    inputmap_set(&mapKeys, SDLK_i, olc_I); inputmap_set(&mapKeys, SDLK_j, olc_J);
-    inputmap_set(&mapKeys, SDLK_k, olc_K); inputmap_set(&mapKeys, SDLK_l, olc_L);
-    inputmap_set(&mapKeys, SDLK_m, olc_M); inputmap_set(&mapKeys, SDLK_n, olc_N);
-    inputmap_set(&mapKeys, SDLK_o, olc_O); inputmap_set(&mapKeys, SDLK_p, olc_P);
-    inputmap_set(&mapKeys, SDLK_q, olc_Q); inputmap_set(&mapKeys, SDLK_r, olc_R);
-    inputmap_set(&mapKeys, SDLK_s, olc_S); inputmap_set(&mapKeys, SDLK_t, olc_T);
-    inputmap_set(&mapKeys, SDLK_u, olc_U); inputmap_set(&mapKeys, SDLK_v, olc_V);
-    inputmap_set(&mapKeys, SDLK_w, olc_W); inputmap_set(&mapKeys, SDLK_x, olc_X);
-    inputmap_set(&mapKeys, SDLK_y, olc_Y); inputmap_set(&mapKeys, SDLK_z, olc_Z);
+    inputmap_set(SDLK_UNKNOWN, olc_NONE);
+    inputmap_set(SDLK_a, olc_A); inputmap_set(SDLK_b, olc_B);
+    inputmap_set(SDLK_c, olc_C); inputmap_set(SDLK_d, olc_D);
+    inputmap_set(SDLK_e, olc_E); inputmap_set(SDLK_f, olc_F);
+    inputmap_set(SDLK_g, olc_G); inputmap_set(SDLK_h, olc_H);
+    inputmap_set(SDLK_i, olc_I); inputmap_set(SDLK_j, olc_J);
+    inputmap_set(SDLK_k, olc_K); inputmap_set(SDLK_l, olc_L);
+    inputmap_set(SDLK_m, olc_M); inputmap_set(SDLK_n, olc_N);
+    inputmap_set(SDLK_o, olc_O); inputmap_set(SDLK_p, olc_P);
+    inputmap_set(SDLK_q, olc_Q); inputmap_set(SDLK_r, olc_R);
+    inputmap_set(SDLK_s, olc_S); inputmap_set(SDLK_t, olc_T);
+    inputmap_set(SDLK_u, olc_U); inputmap_set(SDLK_v, olc_V);
+    inputmap_set(SDLK_w, olc_W); inputmap_set(SDLK_x, olc_X);
+    inputmap_set(SDLK_y, olc_Y); inputmap_set(SDLK_z, olc_Z);
     
-    inputmap_set(&mapKeys, SDLK_0, olc_K0); inputmap_set(&mapKeys, SDLK_1, olc_K1); 
-    inputmap_set(&mapKeys, SDLK_2, olc_K2); inputmap_set(&mapKeys, SDLK_3, olc_K3);
-    inputmap_set(&mapKeys, SDLK_4, olc_K4); inputmap_set(&mapKeys, SDLK_5, olc_K5); 
-    inputmap_set(&mapKeys, SDLK_6, olc_K6); inputmap_set(&mapKeys, SDLK_7, olc_K7);
-    inputmap_set(&mapKeys, SDLK_8, olc_K8); inputmap_set(&mapKeys, SDLK_9, olc_K9);
+    inputmap_set(SDLK_0, olc_K0); inputmap_set(SDLK_1, olc_K1); 
+    inputmap_set(SDLK_2, olc_K2); inputmap_set(SDLK_3, olc_K3);
+    inputmap_set(SDLK_4, olc_K4); inputmap_set(SDLK_5, olc_K5); 
+    inputmap_set(SDLK_6, olc_K6); inputmap_set(SDLK_7, olc_K7);
+    inputmap_set(SDLK_8, olc_K8); inputmap_set(SDLK_9, olc_K9);
 
-    inputmap_set(&mapKeys, SDLK_F1,  olc_F1);  inputmap_set(&mapKeys, SDLK_F2,  olc_F2);
-    inputmap_set(&mapKeys, SDLK_F3,  olc_F3);  inputmap_set(&mapKeys, SDLK_F4,  olc_F4);
-    inputmap_set(&mapKeys, SDLK_F5,  olc_F5);  inputmap_set(&mapKeys, SDLK_F6,  olc_F6);
-    inputmap_set(&mapKeys, SDLK_F7,  olc_F7);  inputmap_set(&mapKeys, SDLK_F8,  olc_F8);
-    inputmap_set(&mapKeys, SDLK_F9,  olc_F9);  inputmap_set(&mapKeys, SDLK_F10, olc_F10);
-    inputmap_set(&mapKeys, SDLK_F11, olc_F11); inputmap_set(&mapKeys, SDLK_F12, olc_F12);
+    inputmap_set(SDLK_F1,  olc_F1);  inputmap_set(SDLK_F2,  olc_F2);
+    inputmap_set(SDLK_F3,  olc_F3);  inputmap_set(SDLK_F4,  olc_F4);
+    inputmap_set(SDLK_F5,  olc_F5);  inputmap_set(SDLK_F6,  olc_F6);
+    inputmap_set(SDLK_F7,  olc_F7);  inputmap_set(SDLK_F8,  olc_F8);
+    inputmap_set(SDLK_F9,  olc_F9);  inputmap_set(SDLK_F10, olc_F10);
+    inputmap_set(SDLK_F11, olc_F11); inputmap_set(SDLK_F12, olc_F12);
 
-    inputmap_set(&mapKeys, SDLK_DOWN,       olc_DOWN);   inputmap_set(&mapKeys, SDLK_LEFT,   olc_LEFT);
-    inputmap_set(&mapKeys, SDLK_RIGHT,      olc_RIGHT);  inputmap_set(&mapKeys, SDLK_UP,     olc_UP);
-    inputmap_set(&mapKeys, SDLK_KP_ENTER,   olc_ENTER);  inputmap_set(&mapKeys, SDLK_RETURN, olc_ENTER);
-    inputmap_set(&mapKeys, SDLK_BACKSPACE,  olc_BACK);   inputmap_set(&mapKeys, SDLK_ESCAPE, olc_ESCAPE);
-    inputmap_set(&mapKeys, SDLK_RETURN,     olc_ENTER);  inputmap_set(&mapKeys, SDLK_PAUSE,  olc_PAUSE);
-    inputmap_set(&mapKeys, SDLK_SCROLLLOCK, olc_SCROLL); inputmap_set(&mapKeys, SDLK_TAB,    olc_TAB);
-    inputmap_set(&mapKeys, SDLK_DELETE,     olc_DEL);    inputmap_set(&mapKeys, SDLK_HOME,   olc_HOME);
-    inputmap_set(&mapKeys, SDLK_END,        olc_END);    inputmap_set(&mapKeys, SDLK_PAGEUP, olc_PGUP);
-    inputmap_set(&mapKeys, SDLK_PAGEDOWN,   olc_PGDN);   inputmap_set(&mapKeys, SDLK_INSERT, olc_INS);
-    inputmap_set(&mapKeys, SDLK_LSHIFT,     olc_SHIFT);  inputmap_set(&mapKeys, SDLK_RSHIFT, olc_SHIFT);
-    inputmap_set(&mapKeys, SDLK_LCTRL,      olc_CTRL);   inputmap_set(&mapKeys, SDLK_RCTRL,  olc_CTRL);
-    inputmap_set(&mapKeys, SDLK_SPACE,      olc_SPACE);
+    inputmap_set(SDLK_DOWN,       olc_DOWN);   inputmap_set(SDLK_LEFT,   olc_LEFT);
+    inputmap_set(SDLK_RIGHT,      olc_RIGHT);  inputmap_set(SDLK_UP,     olc_UP);
+    inputmap_set(SDLK_KP_ENTER,   olc_ENTER);  inputmap_set(SDLK_RETURN, olc_ENTER);
+    inputmap_set(SDLK_BACKSPACE,  olc_BACK);   inputmap_set(SDLK_ESCAPE, olc_ESCAPE);
+    inputmap_set(SDLK_RETURN,     olc_ENTER);  inputmap_set(SDLK_PAUSE,  olc_PAUSE);
+    inputmap_set(SDLK_SCROLLLOCK, olc_SCROLL); inputmap_set(SDLK_TAB,    olc_TAB);
+    inputmap_set(SDLK_DELETE,     olc_DEL);    inputmap_set(SDLK_HOME,   olc_HOME);
+    inputmap_set(SDLK_END,        olc_END);    inputmap_set(SDLK_PAGEUP, olc_PGUP);
+    inputmap_set(SDLK_PAGEDOWN,   olc_PGDN);   inputmap_set(SDLK_INSERT, olc_INS);
+    inputmap_set(SDLK_LSHIFT,     olc_SHIFT);  inputmap_set(SDLK_RSHIFT, olc_SHIFT);
+    inputmap_set(SDLK_LCTRL,      olc_CTRL);   inputmap_set(SDLK_RCTRL,  olc_CTRL);
+    inputmap_set(SDLK_SPACE,      olc_SPACE);
 
-    inputmap_set(&mapKeys, SDLK_KP_0, olc_NP0); inputmap_set(&mapKeys, SDLK_KP_1, olc_NP1);
-    inputmap_set(&mapKeys, SDLK_KP_2, olc_NP2); inputmap_set(&mapKeys, SDLK_KP_3, olc_NP3);
-    inputmap_set(&mapKeys, SDLK_KP_4, olc_NP4); inputmap_set(&mapKeys, SDLK_KP_5, olc_NP5);
-    inputmap_set(&mapKeys, SDLK_KP_6, olc_NP6); inputmap_set(&mapKeys, SDLK_KP_7, olc_NP7);
-    inputmap_set(&mapKeys, SDLK_KP_8, olc_NP8); inputmap_set(&mapKeys, SDLK_KP_9, olc_NP9);
+    inputmap_set(SDLK_KP_0, olc_NP0); inputmap_set(SDLK_KP_1, olc_NP1);
+    inputmap_set(SDLK_KP_2, olc_NP2); inputmap_set(SDLK_KP_3, olc_NP3);
+    inputmap_set(SDLK_KP_4, olc_NP4); inputmap_set(SDLK_KP_5, olc_NP5);
+    inputmap_set(SDLK_KP_6, olc_NP6); inputmap_set(SDLK_KP_7, olc_NP7);
+    inputmap_set(SDLK_KP_8, olc_NP8); inputmap_set(SDLK_KP_9, olc_NP9);
 
-    inputmap_set(&mapKeys, SDLK_KP_MULTIPLY, olc_NP_MUL); inputmap_set(&mapKeys, SDLK_KP_DIVIDE, olc_NP_DIV);
-    inputmap_set(&mapKeys, SDLK_KP_PLUS, olc_NP_ADD); inputmap_set(&mapKeys, SDLK_KP_MINUS, olc_NP_SUB);
-    inputmap_set(&mapKeys, SDLK_KP_PERIOD, olc_NP_DECIMAL); inputmap_set(&mapKeys, SDLK_PERIOD, olc_PERIOD);
+    inputmap_set(SDLK_KP_MULTIPLY, olc_NP_MUL); inputmap_set(SDLK_KP_DIVIDE, olc_NP_DIV);
+    inputmap_set(SDLK_KP_PLUS, olc_NP_ADD); inputmap_set(SDLK_KP_MINUS, olc_NP_SUB);
+    inputmap_set(SDLK_KP_PERIOD, olc_NP_DECIMAL); inputmap_set(SDLK_PERIOD, olc_PERIOD);
 
     return olc_RCODE_OK;
 }
@@ -2384,11 +2362,11 @@ int32_t olc_Platform_HandleSystemEvent()
         }
         else if(event.type == SDL_KEYDOWN)
         {
-            olc_PGE_UpdateKeyState(inputmap_get(&mapKeys, event.key.keysym.sym), true);
+            olc_PGE_UpdateKeyState(inputmap_get(event.key.keysym.sym), true);
         }
         else if(event.type == SDL_KEYUP)
         {
-            olc_PGE_UpdateKeyState(inputmap_get(&mapKeys, event.key.keysym.sym), false);
+            olc_PGE_UpdateKeyState(inputmap_get(event.key.keysym.sym), false);
         }
         else if(event.type == SDL_MOUSEBUTTONDOWN)
         {

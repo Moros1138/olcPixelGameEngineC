@@ -566,13 +566,11 @@ typedef struct
     uint8_t val;
 } inputdata;
 
-static vector mapKeys;
+static inputdata mapKeys[256];
 
-void    inputmap_init(vector *v);
-void    inputmap_destroy(vector* v);
-void    inputmap_delete(vector* v, size_t key);
-uint8_t inputmap_get(vector* v, size_t key);
-void    inputmap_set(vector* v, size_t key, uint8_t val);
+void    inputmap_init();
+uint8_t inputmap_get(size_t key);
+void    inputmap_set(size_t key, uint8_t val);
 
 int32_t olc_Platform_ApplicationStartUp();
 int32_t olc_Platform_ApplicationCleanUp();
