@@ -804,12 +804,11 @@ void SetScreenSize(int w, int h)
     PGE.vScreenSize.x = w;
     PGE.vScreenSize.y = h;
 
-    for(int i = 0; i < PGE.vLayers.size; i++)
+    for(int i = 0; i < cvector_size(PGE.vLayers); i++)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
-        olc_Sprite_Destroy(ld->pDrawTarget);
-        ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
-        ld->bUpdate = true;
+        olc_Sprite_Destroy(PGE.vLayers[i].pDrawTarget);
+        PGE.vLayers[i].pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
+        PGE.vLayers[i].bUpdate = true;
     }
         
     SetDrawTarget(NULL);
@@ -826,8 +825,7 @@ void SetDrawTarget(olc_Sprite *target)
 {
     if(target == NULL)
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, 0);
-        PGE.pDrawTarget = ld->pDrawTarget;
+        PGE.pDrawTarget = PGE.vLayers[0].pDrawTarget;
         PGE.nTargetLayer = 0;
     }
     else
@@ -1301,8 +1299,7 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     vScreenSpaceDim.x = vScreenSpacePos.x + (2.0f * ((float)(decal->sprite->width) * PGE.vInvScreenSize.x)) * scale.x;
     vScreenSpaceDim.y = vScreenSpacePos.y - (2.0f * ((float)(decal->sprite->height) * PGE.vInvScreenSize.y)) * scale.y;
     
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
     
     di->decal = decal;
@@ -1313,7 +1310,6 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
     di->pos[1] = olc_VF2D( vScreenSpacePos.x, vScreenSpaceDim.y );
     di->pos[2] = olc_VF2D( vScreenSpaceDim.x, vScreenSpaceDim.y );
     di->pos[3] = olc_VF2D( vScreenSpaceDim.x, vScreenSpacePos.y );
-
 }
 
 // Draws a region of a decal, with optional scale and tinting
@@ -1329,8 +1325,7 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
         vScreenSpacePos.y - (2.0f * source_size.y * PGE.vInvScreenSize.y) * scale.y
     );
 
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -1369,8 +1364,7 @@ void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_p
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -1392,8 +1386,7 @@ void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf
 
 void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, PGE.nTargetLayer);
-    olc_DecalInstance* di = cvector_push(ld->vecDecalInstance);
+    olc_DecalInstance* di = cvector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -1560,66 +1553,54 @@ void SetAppName(const char* title)
 // Layer targeting functions
 void SetLayerDrawTarget(uint8_t layer)
 {
-    olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-    PGE.pDrawTarget = ld->pDrawTarget;
-    ld->bUpdate = true;
+    PGE.pDrawTarget = PGE.vLayers[layer].pDrawTarget;
+    PGE.vLayers[layer].bUpdate = true;
     PGE.nTargetLayer = layer;
 }
 
 void EnableLayer(uint8_t layer, bool b)
 {
-    if(layer < PGE.vLayers.size)
-    {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->bShow = b;
-    }
+    if(layer < cvector_size(PGE.vLayers))
+        PGE.vLayers[layer].bShow = b;
 }
 
 void SetLayerOffset(uint8_t layer, float x, float y)
 {
-    if(layer < PGE.vLayers.size)
+    if(layer < cvector_size(PGE.vLayers))
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->vOffset.x = x;
-        ld->vOffset.y = y;
+        PGE.vLayers[layer].vOffset.x = x;
+        PGE.vLayers[layer].vOffset.y = y;
     }
 
 }
 
 void SetLayerScale(uint8_t layer, float x, float y)
 {
-    if(layer < PGE.vLayers.size)
+    if(layer < cvector_size(PGE.vLayers))
     {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->vScale.x = x;
-        ld->vScale.y = y;
+        PGE.vLayers[layer].vScale.x = x;
+        PGE.vLayers[layer].vScale.y = y;
     }
 }
 
 void SetLayerTint(uint8_t layer, const olc_Pixel tint)
 {
-    if(layer < PGE.vLayers.size)
-    {
-        olc_LayerDesc* ld = (olc_LayerDesc*)vector_get(&PGE.vLayers, layer);
-        ld->tint = tint;
-    }
+    if(layer < cvector_size(PGE.vLayers))
+        PGE.vLayers[layer].tint = tint;
 }
 
 void SetLayerCustomRenderFunction(uint8_t layer, void (*f)())
 {
-    if(layer < PGE.vLayers.size)
-    {
-        olc_LayerDesc* ld = vector_get(&PGE.vLayers, layer);
-        ld->funcHook = f;
-    }
+    if(layer < cvector_size(PGE.vLayers))
+        PGE.vLayers[layer].funcHook = f;
 }
 
-vector GetLayers()
+olc_LayerDesc* GetLayers()
 { return PGE.vLayers; }
 
 uint32_t CreateLayer()
 {
-    olc_LayerDesc* ld = (olc_LayerDesc*)malloc(sizeof(olc_LayerDesc));
+    olc_LayerDesc* ld = cvector_push(PGE.vLayers);
     
     ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
@@ -1630,9 +1611,7 @@ uint32_t CreateLayer()
 
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
     
-    vector_push(&PGE.vLayers, ld);
-    
-    return (uint32_t)(PGE.vLayers.size - 1);
+    return (uint32_t)(cvector_size(PGE.vLayers) - 1);
 }
 
 // Change the pixel mode for different optimisations
@@ -1847,15 +1826,14 @@ void olc_PGE_CoreUpdate()
     olc_Renderer_ClearBuffer(olc_BLACK, true);
 
     // Layer 0
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
-    ld->bUpdate = true;
-    ld->bShow = true;
+    PGE.vLayers[0].bUpdate = true;
+    PGE.vLayers[0].bShow = true;
 
     olc_Renderer_PrepareDrawing();
 
-    for(int i = PGE.vLayers.size-1; i >= 0; i--)
+    for(int i = cvector_size(PGE.vLayers)-1; i >= 0; i--)
     {
-        olc_LayerDesc* layer = vector_get(&PGE.vLayers, i);
+        olc_LayerDesc* layer = &PGE.vLayers[i];
         if(layer->bShow)
         {
             if(layer->funcHook == NULL)
@@ -1910,14 +1888,13 @@ void olc_PGE_PrepareEngine()
     if(olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
 
     // Initialize Layer Vector
-    vector_init(&PGE.vLayers);
-    
+    PGE.vLayers = cvector_type_alloc(olc_LayerDesc);
+
     // Create Primary Layer "0"
     CreateLayer();
 
-    olc_LayerDesc* ld = vector_get(&PGE.vLayers, 0);
-    ld->bUpdate = true;
-    ld->bShow = true;
+    PGE.vLayers[0].bUpdate = true;
+    PGE.vLayers[0].bShow = true;
     SetDrawTarget(NULL);
 
     // Construct default font sheet
@@ -2200,13 +2177,13 @@ int32_t olc_Platform_ApplicationStartUp()
 
 int32_t olc_Platform_ApplicationCleanUp()
 {
-    for(size_t i = 0; i < PGE.vLayers.size; i++)
+    for(size_t i = 0; i < cvector_size(PGE.vLayers); i++)
     {
-        olc_LayerDesc* layer = (olc_LayerDesc*)vector_get(&PGE.vLayers, i);
-        cvector_clear(layer->vecDecalInstance);
-        cvector_free(layer->vecDecalInstance);
+        cvector_clear(PGE.vLayers[i].vecDecalInstance);
+        cvector_free(PGE.vLayers[i].vecDecalInstance);
     }
-    vector_clear(&PGE.vLayers);
+    cvector_clear(PGE.vLayers);
+    cvector_free(PGE.vLayers);
 
     olc_PGE_DestroyFontSheet();
     olc_Sprite_Destroy(PGE.pDrawTarget);

@@ -338,7 +338,7 @@ typedef struct
     olc_Sprite* fontSprite;
     olc_Decal*  fontDecal;
     olc_Sprite* pDefaultDrawTarget;
-    vector      vLayers;
+    olc_LayerDesc* vLayers;
     uint8_t		nTargetLayer;
     uint32_t	nLastFPS;
     olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2);
@@ -492,7 +492,7 @@ void SetLayerScale(uint8_t layer, float x, float y);
 void SetLayerTint(uint8_t layer, const olc_Pixel tint);
 void SetLayerCustomRenderFunction(uint8_t layer, void (*f)());
 
-vector GetLayers();
+olc_LayerDesc* GetLayers();
 uint32_t CreateLayer();
 
 // Change the pixel mode for different optimisations
