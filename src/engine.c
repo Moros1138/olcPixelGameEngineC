@@ -410,6 +410,7 @@ void olc_Decal_Destroy(olc_Decal* decal)
     {
         olc_Renderer_DeleteTexture(decal->id);
         decal->id = -1;
+        free(decal);
     }
 }
 
@@ -1648,6 +1649,12 @@ void olc_PGE_ConstructFontSheet()
     PGE.fontDecal = olc_Decal_Create(PGE.fontSprite);
 }
 
+void olc_PGE_DestroyFontSheet()
+{
+    olc_Decal_Destroy(PGE.fontDecal);
+    olc_Sprite_Destroy(PGE.fontSprite);
+}
+
 void olc_PGE_CoreUpdate()
 {
     PGE.tp2 = SDL_GetPerformanceCounter();
@@ -2147,6 +2154,10 @@ int32_t olc_Platform_ApplicationCleanUp()
     }
     vector_clear(&PGE.vLayers);
 
+    olc_PGE_DestroyFontSheet();
+    olc_Sprite_Destroy(PGE.pDrawTarget);
+    free(PGE.sAppName);
+    
     inputmap_destroy(&mapKeys);
     
     SDL_DestroyRenderer(olc_Renderer);
