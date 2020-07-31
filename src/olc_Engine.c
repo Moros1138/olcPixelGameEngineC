@@ -1672,7 +1672,7 @@ void olc_PGE_DestroyFontSheet()
 
 void olc_PGE_CoreUpdate()
 {
-    olc_GetTime(PGE.tp2);
+    olc_CrossPlatform_GetTime(PGE.tp2);
     double duration = 1000.0*PGE.tp2.tv_sec + 1e-6*PGE.tp2.tv_nsec - (1000.0*PGE.tp1.tv_sec + 1e-6*PGE.tp1.tv_nsec);
     PGE.tp1 = PGE.tp2;
 
@@ -1817,8 +1817,8 @@ void olc_PGE_PrepareEngine()
 
     // Construct default font sheet
     olc_PGE_ConstructFontSheet();
-    olc_GetTime(PGE.tp1);
-    olc_GetTime(PGE.tp2);
+    olc_CrossPlatform_GetTime(PGE.tp1);
+    olc_CrossPlatform_GetTime(PGE.tp2);
 }
 
 void olc_PGE_UpdateMouseState(int32_t button, bool state)
