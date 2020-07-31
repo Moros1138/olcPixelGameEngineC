@@ -303,7 +303,12 @@ olc_Sprite* olc_Sprite_LoadFromPGESprFile(const char *sImageFile)
             exit(EXIT_FAILURE);
         }
 
-        fread(pixels, sizeof(uint32_t), width*height, fp);
+        size_t pret = fread(pixels, sizeof(uint32_t), width*height, fp);
+        if(pret != (width*height))
+        {
+            fprintf(stderr, "Error loading PGESprite Pixels.\n");
+            exit(EXIT_FAILURE);
+        }
 
         olc_Sprite* sprite = olc_Sprite_Create(width, height);
 
