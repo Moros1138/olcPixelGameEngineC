@@ -1518,15 +1518,17 @@ uint32_t CreateLayer()
 {
     olc_LayerDesc* ld = vector_push(PGE.vLayers);
     
+    ld->vOffset = olc_VF2D( 0, 0 );
+    ld->vScale = olc_VF2D( 1, 1 );
+    ld->bShow = false;
+    ld->bUpdate = false;
     ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
+    ld->vecDecalInstance = vector_type_alloc(olc_DecalInstance);
     ld->tint = olc_WHITE;
     ld->funcHook = NULL;
 
-    ld->vecDecalInstance = vector_type_alloc(olc_DecalInstance);
-
     olc_Renderer_UpdateTexture(ld->nResID, ld->pDrawTarget);
-    
     return (uint32_t)(vector_size(PGE.vLayers) - 1);
 }
 
