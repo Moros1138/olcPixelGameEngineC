@@ -8,3 +8,7 @@ src/test
 src/test2
 
 src/test.cpp
+
+bin/SDLtest
+
+bin/SDLtest.exe
