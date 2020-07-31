@@ -1,5 +1,5 @@
 // #define OLC_PGE_APPLICATION
-#include "engine.h"
+#include "olc_Engine.h"
 
 char buf[256];
 float fTimeTracker = 0.0f;
@@ -39,12 +39,6 @@ bool OnUserUpdate(float fElapsedTime)
     
     FillTriangle(rand() % ScreenWidth(), rand() % ScreenHeight(), rand() % 50, rand() % 50, rand() % 100, rand() % 100, olc_PixelRGB(rand() % 255, rand() % 255, rand() % 255));
 
-    // Clear(olc_BLACK);
-    // SetPixelMode(olc_PIXELMODE_ALPHA);
-    // DrawPartialSprite(GetMouseX()+sprite->width, GetMouseY()+sprite->height, sprite, 25, 25, 16, 16, 1, olc_SPRITEFLIP_NONE);
-    // DrawSprite(GetMouseX()-(sprite->width/2), GetMouseY()-(sprite->height/2), sprite, 1, olc_SPRITEFLIP_NONE);
-    // SetPixelMode(olc_PIXELMODE_NORMAL);
-
     return !GetKey(olc_ESCAPE).bPressed;
 }
 
@@ -56,7 +50,7 @@ bool OnUserDestroy()
 
 int main(int argc, char* argv[])
 {
-    SetAppName("IT WORKS!!!");
+    SetAppName("OpenGL C Demo");
     if(Construct(320, 240, 3, 3, false, false))
     {
         Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
