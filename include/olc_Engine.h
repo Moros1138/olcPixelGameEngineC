@@ -1,9 +1,18 @@
-#ifndef ENGINE_H
-#define ENGINE_H
+#ifndef OLC_ENGINE_H
+#define OLC_ENGINE_H
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
+
+#if defined(__linux__) || defined(__MINGW32__)
+#define olc_GetTime(t) clock_gettime(CLOCK_MONOTONIC, &t)
+#endif
+
+#if defined(_WIN32) && !defined(__MINGW32__)
+#define olc_GetTime(t) timespec_get(&t, TIME_UTC)
+#endif
+
 
 #include <assert.h>
 #include <math.h>
@@ -50,13 +59,21 @@ size_t vector_element_size(void* vect);
 void* vector_at(void* vect, size_t index);
 void vector_clear(void* vect);
 
+typedef struct 
+{
+    size_t key;
+    uint8_t val;
+} inputdata;
+
+static inputdata mapKeys[256];
+
+void    inputmap_init();
+uint8_t inputmap_get(size_t key);
+void    inputmap_set(size_t key, uint8_t val);
+
 #define UNUSED(x) (void)(x)
 #define olc_MIN(a, b) (a < b) ? a : b
 #define olc_MAX(a, b) (a > b) ? a : b
-
-#if !defined(OLC_GFX_OPENGL33) && !defined(OLC_GFX_DIRECTX10)
-	#define OLC_GFX_OPENGL10
-#endif
 
 #define olc_nMouseButtons 5
 #define olc_nDefaultAlpha 0xFF
@@ -244,7 +261,7 @@ typedef struct DecalInstance
 
 void olc_DecalInstance_Create(olc_DecalInstance* di);
 
-// NOT IMPLEMENTED - Here for Reasons
+// NOT IMPLEMENTED IN SDL - Here for Reasons
 typedef struct DecalTriangleInstance
 {
     olc_vf2d points[3];
@@ -308,7 +325,7 @@ typedef struct
     uint8_t		nTargetLayer;
     uint32_t	nLastFPS;
     olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2);
-    uint64_t tp1, tp2;
+    struct timespec tp1, tp2;
 
     // State of keyboard		
     bool         pKeyNewState[256];
@@ -392,6 +409,7 @@ bool IsMouseCursorVisible();
 
 // DRAWING ROUTINES
 
+
 // Draws a single Pixel
 bool Draw(int32_t x, int32_t y, olc_Pixel p);
 // Draws a line from (x1,y1) to (x2,y2)
@@ -421,20 +439,20 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
 void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint);
 // Draws a region of a decal, with optional scale and tinting
 void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
-// NOT IMPLEMENTED! - Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
+// NOT IMPLEMENTED IN SDL! - Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
 void DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col);
-// NOT IMPLEMENTED! - Draws a decal with 4 arbitrary points, warping the texture to look "correct"
+// NOT IMPLEMENTED IN SDL! - Draws a decal with 4 arbitrary points, warping the texture to look "correct"
 void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint);
-// NOT IMPLEMENTED! - As above, but you can specify a region of a decal source sprite
+// NOT IMPLEMENTED IN SDL! - As above, but you can specify a region of a decal source sprite
 void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint);
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint);
 void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
 // Draws a multiline string as a decal, with tiniting and scaling
 void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale);
-// NOT IMPLEMENTED! - Draws a single shaded filled rectangle as a decal
+// NOT IMPLEMENTED IN SDL! - Draws a single shaded filled rectangle as a decal
 void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col);
-// NOT IMPLEMENTED! - Draws a corner shaded rectangle as a decal
+// NOT IMPLEMENTED IN SDL! - Draws a corner shaded rectangle as a decal
 void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
 
 
@@ -493,23 +511,7 @@ void olc_PGE_UpdateMouseFocus(bool state);
 void olc_PGE_UpdateKeyFocus(bool state);
 void olc_PGE_Terminate();
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_keyboard.h>
-#include <SDL2/SDL_image.h>
-
-static SDL_Window*   olc_Window;
-static SDL_Renderer* olc_Renderer;
-static SDL_Rect rViewport;
-typedef struct
-{
-    int id;
-    SDL_Texture* t;
-} texturedata;
-
-static SDL_Texture** vTextures;
-static int nActiveTexture = -1;
-static int nTextureID = 0;
-static int nOpenSlot = 0;
+// RENDERER
 
 void       olc_Renderer_PrepareDevice();
 int32_t    olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC);
@@ -525,18 +527,7 @@ void       olc_Renderer_ApplyTexture(uint32_t id);
 void       olc_Renderer_UpdateViewport(const olc_vi2d pos, const olc_vi2d size);
 void       olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth);
 
-
-typedef struct 
-{
-    size_t key;
-    uint8_t val;
-} inputdata;
-
-static inputdata mapKeys[256];
-
-void    inputmap_init();
-uint8_t inputmap_get(size_t key);
-void    inputmap_set(size_t key, uint8_t val);
+// PLATFORM
 
 int32_t olc_Platform_ApplicationStartUp();
 int32_t olc_Platform_ApplicationCleanUp();
