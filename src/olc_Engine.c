@@ -12,7 +12,7 @@ olc_Pixel olc_GREY, olc_DARK_GREY, olc_VERY_DARK_GREY,
 olc_PixelGameEngine PGE;
 
 // local utility functions
-void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i++) Draw(i, ny, p); };
+void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i++) Draw(i, ny, p); }
 void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }
 bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
 
@@ -625,15 +625,15 @@ int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
 #endif
 
 bool DefaultOnUserCreate() { return true; }
-bool DefaultOnUserUpdate(float fElapsedTime) { UNUSED(fElapsedTime); return true; };
+bool DefaultOnUserUpdate(float fElapsedTime) { UNUSED(fElapsedTime); return true; }
 bool DefaultOnUserDestroy() { return true; }
 
 
-void EngineThread()
+void* EngineThread()
 {
     // Allow platform to do stuff here if needed, since its now in the
     // context of this thread
-    if(olc_Platform_ThreadStartUp() == olc_RCODE_FAIL)	return;
+    if(olc_Platform_ThreadStartUp() == olc_RCODE_FAIL)	return NULL;
 
     // Do engine context specific initialisation
     olc_PGE_PrepareEngine();
