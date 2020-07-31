@@ -604,18 +604,16 @@ int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
     if(olc_Platform_CreateWindowPane(vWinPos, PGE.vWindowSize, PGE.bFullScreen) != olc_RCODE_OK) return olc_RCODE_FAIL;
     olc_PGE_UpdateWindowSize(PGE.vWindowSize.x, PGE.vWindowSize.y);
 
-    // Start the thread
     PGE.bActive = true;
     
-    // std::thread t = std::thread(&PixelGameEngine::EngineThread, this);
-    EngineThread();
-
+    // Start the thread
+    olc_CrossPlatform_StartThread();
 
     // Some implementations may form an event loop here
     olc_Platform_StartSystemEventLoop();
     
     // Wait for thread to be exited
-    // t.join();
+    olc_CrossPlatform_JoinThread();
 
     if(olc_Platform_ApplicationCleanUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
 
