@@ -6,13 +6,15 @@
 #endif
 
 #if defined(__linux__) || defined(__MINGW32__)
-#define olc_GetTime(t) clock_gettime(CLOCK_MONOTONIC, &t)
+#include <pthread.h>
+#define olc_CrossPlatform_StartThread() pthread_t t; pthread_create(&t, NULL, &EngineThread, NULL)
+#define olc_CrossPlatform_JoinThread() pthread_join(t, NULL)
+#define olc_CrossPlatform_GetTime(t) clock_gettime(CLOCK_MONOTONIC, &t)
 #endif
 
 #if defined(_WIN32) && !defined(__MINGW32__)
-#define olc_GetTime(t) timespec_get(&t, TIME_UTC)
+#define olc_CrossPlatform_GetTime(t) timespec_get(&t, TIME_UTC)
 #endif
-
 
 #include <assert.h>
 #include <math.h>
@@ -249,7 +251,6 @@ olc_Decal*      olc_Renderable_GetDecal(olc_Renderable* renderable);
 // O------------------------------------------------------------------------------O
 // | Auxilliary components internal to engine                                     |
 // O------------------------------------------------------------------------------O
-
 typedef struct DecalInstance 
 {
     olc_Decal* decal;
@@ -357,7 +358,7 @@ bool DefaultOnUserCreate();
 bool DefaultOnUserUpdate(float);
 bool DefaultOnUserDestroy();
 
-void EngineThread();
+void* EngineThread();
 
 
 // Hardware Interfaces
