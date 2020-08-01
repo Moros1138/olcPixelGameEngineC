@@ -1,21 +1,21 @@
-#define OLC_USE_SDL
-#include "olc_Engine.h"
+#define OLC_PGE_APPLICATION
+#include "../olcPixelGameEngineC.h"
 
 float fTimeTracker = 0.0f;
 
 bool OnUserCreate()
-{
-    return true;
-}
+{ return true; }
 
 bool OnUserUpdate(float fElapsedTime)
 {
-    if(GetKey(olc_SPACE).bPressed) ShowSystemMouseCursor(!IsMouseCursorVisible());
 
     fTimeTracker += fElapsedTime;
+
+    // Delay (so we can observe the random drawings)
     if(fTimeTracker < 0.1f)
         return !GetKey(olc_ESCAPE).bPressed;
 
+    // Reset Delay
     fTimeTracker -= 0.1f;
 
     Clear(olc_BLACK);
@@ -49,18 +49,12 @@ bool OnUserUpdate(float fElapsedTime)
 }
 
 bool OnUserDestroy()
-{
-    return true;
-}
-
+{ return true; }
 
 int main(int argc, char* argv[])
 {
-    SetAppName("SDL C Demo");
     if(Construct(320, 240, 3, 3, false, false))
-    {
         Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
-    }
 
     return 0;
 }

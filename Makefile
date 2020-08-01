@@ -1,17 +1,22 @@
-.PHONY: linux-opengl linux-sdl windows-sdl 
+ifeq ($(OS),Windows_NT)
+	EXT		:= .exe
+	LIBS	:= -lm -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi
+else
+	EXT		:=
+	LIBS	:= -lm -lX11 -lGL -lpthread -lpng
+endif
 
-linux-opengl:
-	gcc -o bin/GLtest src/GLtest.c src/olc_Engine.c src/olc_EngineOpenGL.c -I./include -lm -lX11 -lGL -lpthread -lpng
-	./bin/GLtest
+.PHONY: example drawing sprites decals
 
-linux-sdl:
-	gcc -o bin/SDLtest src/SDLtest.c src/olc_Engine.c src/olc_EngineSDL.c -I./include -lm -lSDL2 -lSDL2_image
-	./bin/SDLtest
+example:
+	gcc -o demos/bin/example$(EXT) demos/example.c $(LIBS)
 
-windows-sdl:
-	gcc -o bin/SDLtest.exe src/SDLtest.c src/olc_Engine.c src/olc_EngineSDL.c -I./include -lm -lSDL2 -lSDL2_image
-	bin\SDLtest.exe
+drawing:
+	gcc -o demos/bin/drawing$(EXT) demos/drawing.c $(LIBS)
 
-windows-opengl:
-	gcc -o bin/GLtest.exe src/GLtest.c src/olc_Engine.c src/olc_EngineOpenGL.c -I./include -lm -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi
-	./bin/GLtest.exe
+sprites:
+	gcc -o demos/bin/sprites$(EXT) demos/sprites.c $(LIBS)
+
+decals:
+	gcc -o demos/bin/decals$(EXT) demos/decals.c $(LIBS)
+
