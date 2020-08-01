@@ -12,3 +12,5 @@ src/test.cpp
 bin/SDLtest
 
 bin/SDLtest.exe
+
+bin/GLtest
