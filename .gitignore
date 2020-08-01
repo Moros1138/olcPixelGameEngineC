@@ -14,3 +14,7 @@ bin/SDLtest
 bin/SDLtest.exe
 
 bin/GLtest
+
+demos/bin/decals
+
+demos/bin/drawing
