@@ -2434,7 +2434,7 @@ olc_CrossPlatform_Thread PGE_EngineThread()
 {
     // Allow platform to do stuff here if needed, since its now in the
     // context of this thread
-    if(olc_Platform_ThreadStartUp() == olc_RCODE_FAIL)	return NULL;
+    if(olc_Platform_ThreadStartUp() == olc_RCODE_FAIL)	return olc_CrossPlatform_Thread_Return;
 
     // Do engine context specific initialisation
     olc_PGE_PrepareEngine();
