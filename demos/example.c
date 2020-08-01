@@ -6,11 +6,11 @@ bool OnUserCreate()
 
 bool OnUserUpdate(float fElapsedTime)
 {
-    for(int y = 0; y < ScreenHeight(); y++)
-        for(int x = 0; x < ScreenWidth(); x++)
-            Draw(rand() % ScreenWidth(), rand() % ScreenHeight(), olc_PixelRGB(rand() % 255, rand() % 255, rand() % 255));
+    for(int y = 0; y < PGE_ScreenHeight(); y++)
+        for(int x = 0; x < PGE_ScreenWidth(); x++)
+            PGE_Draw(rand() % PGE_ScreenWidth(), rand() % PGE_ScreenHeight(), olc_PixelRGB(rand() % 255, rand() % 255, rand() % 255));
             
-    return true;
+    return !PGE_GetKey(olc_ESCAPE).bPressed;
 }
 
 bool OnUserDestroy()
@@ -18,8 +18,8 @@ bool OnUserDestroy()
 
 int main(int argc, char* argv[])
 {
-    if(Construct(320, 240, 3, 3, false, false))
-        Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
+    if(PGE_Construct(320, 240, 3, 3, false, false))
+        PGE_Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
 
     return 0;
 }

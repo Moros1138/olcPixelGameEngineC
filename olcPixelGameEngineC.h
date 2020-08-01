@@ -209,14 +209,20 @@ int main()
 // Linux and MinGW Specific Macros
 #if defined(__linux__) || defined(__MINGW32__)
 #include <pthread.h>
-#define olc_StartThread() pthread_t olc_Thread; pthread_create(&olc_Thread, NULL, EngineThread, NULL)
-#define olc_JoinThread() pthread_join(olc_Thread, NULL)
 #define olc_CrossPlatform_GetTime(t) clock_gettime(CLOCK_MONOTONIC, &t)
+#define olc_CrossPlatform_Thread void*
+#define olc_CrossPlatform_Thread_Return NULL
+#define olc_CrossPlatform_Thread_Start() pthread_t olc_Thread; pthread_create(&olc_Thread, NULL, PGE_EngineThread, NULL)
+#define olc_CrossPlatform_Thread_Join() pthread_join(olc_Thread, NULL)
 #endif
 
 // Windows MSVC Specific Macros
 #if defined(_WIN32) && !defined(__MINGW32__)
 #define olc_CrossPlatform_GetTime(t) timespec_get(&t, TIME_UTC)
+#define olc_CrossPlatform_Thread DWORD WINAPI
+#define olc_CrossPlatform_Thread_Return 0
+#define olc_CrossPlatform_Thread_Start() HANDLE hThread = CreateThread(NULL, 0, PGE_EngineThread, NULL, 0, NULL)
+#define olc_CrossPlatform_Thread_Join() WaitForSingleObject(hThread, INFINITE); CloseHandle(hThread)
 #endif
 
 #if defined(UNICODE) || defined(_UNICODE)
@@ -597,152 +603,152 @@ olc_PixelGameEngine PGE;
 // O------------------------------------------------------------------------------O
 void olc_PGE_DefaultState();
 
-int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
+int32_t PGE_Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
     bool full_screen, bool vsync);
-int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
+int32_t PGE_Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
     
-bool DefaultOnUserCreate();
-bool DefaultOnUserUpdate(float);
-bool DefaultOnUserDestroy();
+bool PGE_DefaultOnUserCreate();
+bool PGE_DefaultOnUserUpdate(float);
+bool PGE_DefaultOnUserDestroy();
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - Hardware Interfaces                                   |
 // O------------------------------------------------------------------------------O
 
 // Returns true if window is currently in focus
-bool IsFocused();
+bool PGE_IsFocused();
 // Get the state of a specific keyboard button
-olc_HWButton GetKey(uint8_t k);
+olc_HWButton PGE_GetKey(uint8_t k);
 // Get the state of a specific mouse button
-olc_HWButton GetMouse(uint32_t b);
+olc_HWButton PGE_GetMouse(uint32_t b);
 // Get Mouse X coordinate in "xel" space
-int32_t GetMouseX();
+int32_t PGE_GetMouseX();
 // Get Mouse Y coordinate in "pixel" space
-int32_t GetMouseY();
+int32_t PGE_GetMouseY();
 // Get Mouse Wheel Delta
-int32_t GetMouseWheel();
+int32_t PGE_GetMouseWheel();
 // Get the ouse in window space
-olc_vi2d GetWindowMouse();
+olc_vi2d PGE_GetWindowMouse();
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - Utility                                               |
 // O------------------------------------------------------------------------------O
 
 // Returns the width of the screen in "pixels"
-int32_t ScreenWidth();
+int32_t PGE_ScreenWidth();
 // Returns the height of the screen in "pixels"
-int32_t ScreenHeight();
+int32_t PGE_ScreenHeight();
 // Returns the width of the currently selected drawing target in "pixels"
-int32_t GetDrawTargetWidth();
+int32_t PGE_GetDrawTargetWidth();
 // Returns the height of the currently selected drawing target in "pixels"
-int32_t GetDrawTargetHeight();
+int32_t PGE_GetDrawTargetHeight();
 // Returns the currently active draw target
-olc_Sprite* GetDrawTarget();
+olc_Sprite* PGE_GetDrawTarget();
 // Resize the primary screen sprite
-void SetScreenSize(int w, int h);
+void PGE_SetScreenSize(int w, int h);
 // Specify which Sprite should be the target of drawing functions, use NULL
 // to specify the primary screen
-void SetDrawTarget(olc_Sprite *target);
+void PGE_SetDrawTarget(olc_Sprite *target);
 // Gets the current Frames Per Second
-uint32_t GetFPS();
+uint32_t PGE_GetFPS();
 // Gets last update of elapsed time
-const float GetElapsedTime();
+const float PGE_GetElapsedTime();
 // Gets Actual Window size
-const olc_vi2d GetWindowSize();
+const olc_vi2d PGE_GetWindowSize();
 // Is system mouse cursor currently visible?
-bool IsMouseCursorVisible();
+bool PGE_IsMouseCursorVisible();
 // show the system mouse cursor (true: visible, false: invisible)
-void ShowSystemMouseCursor(bool state);
+void PGE_ShowSystemMouseCursor(bool state);
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - Configuration Routines                                |
 // O------------------------------------------------------------------------------O
-void SetAppName(const char *title);
+void PGE_SetAppName(const char *title);
 
 // Layer targeting functions
-void SetLayerTarget(uint8_t layer);
-void EnableLayer(uint8_t layer, bool b);
-void SetLayerOffset(uint8_t layer, float x, float y);
-void SetLayerScale(uint8_t layer, float x, float y);
-void SetLayerTint(uint8_t layer, const olc_Pixel tint);
-void SetLayerCustomRenderFunction(uint8_t layer, void (*f)());
+void PGE_SetLayerTarget(uint8_t layer);
+void PGE_EnableLayer(uint8_t layer, bool b);
+void PGE_SetLayerOffset(uint8_t layer, float x, float y);
+void PGE_SetLayerScale(uint8_t layer, float x, float y);
+void PGE_SetLayerTint(uint8_t layer, const olc_Pixel tint);
+void PGE_SetLayerCustomRenderFunction(uint8_t layer, void (*f)());
 
-olc_LayerDesc* GetLayers();
-uint32_t CreateLayer();
+olc_LayerDesc* PGE_GetLayers();
+uint32_t PGE_CreateLayer();
 
 // Change the pixel mode for different optimisations
 // olc_PIXELMODE_NORMAL = No transparency
 // olc_PIXELMODE_MASK   = Transparent if alpha is < 255
 // olc_PIXELMODE_ALPHA  = Full transparency
-void SetPixelMode(int32_t m);
-int32_t GetPixelMode();
+void PGE_SetPixelMode(int32_t m);
+int32_t PGE_GetPixelMode();
 // Use a custom blend function
-void SetCustomPixelMode(olc_Pixel (*f)(int x, int y, olc_Pixel p1, olc_Pixel p2));
+void PGE_SetCustomPixelMode(olc_Pixel (*f)(int x, int y, olc_Pixel p1, olc_Pixel p2));
 // Change the blend factor form between 0.0f to 1.0f;
-void SetPixelBlend(float fBlend);
+void PGE_SetPixelBlend(float fBlend);
 // Offset texels by sub-pixel amount (advanced, do not use)
-void SetSubPixelOffset(float ox, float oy);
+void PGE_SetSubPixelOffset(float ox, float oy);
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - Drawing Routines                                      |
 // O------------------------------------------------------------------------------O
 
 // Draws a single Pixel
-bool Draw(int32_t x, int32_t y, olc_Pixel p);
+bool PGE_Draw(int32_t x, int32_t y, olc_Pixel p);
 // Draws a line from (x1,y1) to (x2,y2)
-void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern);
+void PGE_DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern);
 // Draws a circle located at (x,y) with radius
-void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask);
+void PGE_DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask);
 // Fills a circle located at (x,y) with radius
-void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p);
+void PGE_FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p);
 // Draws a rectangle at (x,y) to (x+w,y+h)
-void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
+void PGE_DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
 // Fills a rectangle at (x,y) to (x+w,y+h)
 void PGE_FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
 // Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
-void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
+void PGE_DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
 // Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
-void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
+void PGE_FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
 // Draws an entire sprite at well in my defencelocation (x,y)
-void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip);
+void PGE_DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip);
 // Draws an area of a sprite at location (x,y), where the
 // selected area is (ox,oy) to (ox+w,oy+h)
-void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip);
+void PGE_DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip);
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - Decal Quad Functions                                  |
 // O------------------------------------------------------------------------------O
 
 // Draws a whole decal, with optional scale and tinting
-void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint);
+void PGE_DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint);
 // Draws a region of a decal, with optional scale and tinting
-void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
-// NOT IMPLEMENTED IN SDL! - Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
-void DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col);
-// NOT IMPLEMENTED IN SDL! - Draws a decal with 4 arbitrary points, warping the texture to look "correct"
-void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint);
-// NOT IMPLEMENTED IN SDL! - As above, but you can specify a region of a decal source sprite
-void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint);
+void PGE_DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
+// Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
+void PGE_DrawExplicitDecal(olc_Decal* decal, olc_vf2d *pos, olc_vf2d *uv, const olc_Pixel *col);
+// Draws a decal with 4 arbitrary points, warping the texture to look "correct"
+void PGE_DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint);
+// As above, but you can specify a region of a decal source sprite
+void PGE_DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint);
 // Draws a decal rotated to specified angle, wit point of rotation offset
-void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint);
-void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
+void PGE_DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint);
+void PGE_DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint);
 // Draws a multiline string as a decal, with tiniting and scaling
-void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale);
+void PGE_DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale);
 // Draws a single shaded filled rectangle as a decal
-void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col);
+void PGE_FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col);
 // Draws a corner shaded rectangle as a decal
-void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
+void PGE_GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR);
 
 
 // Draws a single line of text
-void DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale);
-olc_vi2d GetTextSize(const char* s);
+void PGE_DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale);
+olc_vi2d PGE_GetTextSize(const char* s);
 // Clears entire draw target to Pixel
-void Clear(olc_Pixel p);
-void ClearBuffer(olc_Pixel p, bool depth);
+void PGE_Clear(olc_Pixel p);
+void PGE_ClearBuffer(olc_Pixel p, bool depth);
 
 // The main engine thread
-void* EngineThread();
+olc_CrossPlatform_Thread PGE_EngineThread();
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - "Break In" Functions                                  |
@@ -775,7 +781,7 @@ void olc_PGE_Terminate();
 #undef OLC_PGE_APPLICATION
 
 // local utility functions
-static void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i++) Draw(i, ny, p); }
+static void drawline(int sx, int ex, int ny, olc_Pixel p) { for (int i = sx; i <= ex; i++) PGE_Draw(i, ny, p); }
 static void swap_int(int *a, int *b) { int temp = *a; *a = *b; *b = temp; }
 static bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
 
@@ -1312,12 +1318,12 @@ void olc_PGE_DefaultState()
     PGE.bMouseIsVisible = true;
 
     if(PGE.sAppName == NULL)
-        SetAppName("");
+        PGE_SetAppName("");
     
     sprintf(PGE.sTitle, "OneLoneCoder.com - Pixel Game Engine - %s - FPS: %d", PGE.sAppName, PGE.nFrameCount);
 }
 
-int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h, bool full_screen, bool vsync)
+int32_t PGE_Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h, bool full_screen, bool vsync)
 {
     PGE.vScreenSize.x = screen_w;
     PGE.vScreenSize.y = screen_h;
@@ -1347,11 +1353,11 @@ int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t p
 }
 
 #if !defined(PGE_USE_CUSTOM_START)
-int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
+int32_t PGE_Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
 {
-    PGE.OnUserCreate = (create == NULL) ? &DefaultOnUserCreate : create;
-    PGE.OnUserUpdate = (update == NULL) ? &DefaultOnUserUpdate : update;
-    PGE.OnUserDestroy = (destroy == NULL) ? &DefaultOnUserDestroy : destroy;
+    PGE.OnUserCreate = (create == NULL) ? &PGE_DefaultOnUserCreate : create;
+    PGE.OnUserUpdate = (update == NULL) ? &PGE_DefaultOnUserUpdate : update;
+    PGE.OnUserDestroy = (destroy == NULL) ? &PGE_DefaultOnUserDestroy : destroy;
     
     if(olc_Platform_ApplicationStartUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
     
@@ -1366,15 +1372,12 @@ int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
 
     PGE.bActive = true;
 
-    // TODO: Thread here eventually    
-    olc_StartThread();
-    // EngineThread();
+    olc_CrossPlatform_Thread_Start();
 
     // Some implementations may form an event loop here
     olc_Platform_StartSystemEventLoop();
     
-    // TODO: Join Thread    
-    olc_JoinThread();
+    olc_CrossPlatform_Thread_Join();
 
     if(olc_Platform_ApplicationCleanUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
 
@@ -1382,49 +1385,49 @@ int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
 }
 #endif
 
-bool DefaultOnUserCreate() { return true; }
-bool DefaultOnUserUpdate(float fElapsedTime) { UNUSED(fElapsedTime); return true; }
-bool DefaultOnUserDestroy() { return true; }
+bool PGE_DefaultOnUserCreate() { return true; }
+bool PGE_DefaultOnUserUpdate(float fElapsedTime) { UNUSED(fElapsedTime); return true; }
+bool PGE_DefaultOnUserDestroy() { return true; }
 
 // O------------------------------------------------------------------------------O
 // | olc::PixelGameEngine - Hardware Interfaces                                   |
 // O------------------------------------------------------------------------------O
 
 // Returns true if window is currently in focus
-bool IsFocused()
+bool PGE_IsFocused()
 { return PGE.bHasInputFocus; }
 
 // Get the state of a specific keyboard button
 
-olc_HWButton GetKey(uint8_t k)
+olc_HWButton PGE_GetKey(uint8_t k)
 { return PGE.pKeyboardState[k]; }
 
 // Get the state of a specific mouse button
-olc_HWButton GetMouse(uint32_t b)
+olc_HWButton PGE_GetMouse(uint32_t b)
 { return PGE.pMouseState[b]; }
 
 // Get Mouse X coordinate in "xel" space
-int32_t GetMouseX()
+int32_t PGE_GetMouseX()
 { return PGE.vMousePos.x; }
 
 // Get Mouse Y coordinate in "pixel" space
-int32_t GetMouseY()
+int32_t PGE_GetMouseY()
 { return PGE.vMousePos.y; }
 
 // Get Mouse Wheel Delta
-int32_t GetMouseWheel()
+int32_t PGE_GetMouseWheel()
 { return PGE.nMouseWheelDelta; }
 
 // Get the ouse in window space
-olc_vi2d GetWindowMouse()
+olc_vi2d PGE_GetWindowMouse()
 { return PGE.vMouseWindowPos; }
 
 // Is system mouse cursor currently visible?
-bool IsMouseCursorVisible()
+bool PGE_IsMouseCursorVisible()
 { return PGE.bMouseIsVisible; }
 
 // show the system mouse cursor (true: visible, false: invisible)
-void ShowSystemMouseCursor(bool state)
+void PGE_ShowSystemMouseCursor(bool state)
 { PGE.bMouseIsVisible = state; }
 
 
@@ -1433,27 +1436,27 @@ void ShowSystemMouseCursor(bool state)
 // O------------------------------------------------------------------------------O
 
 // Returns the width of the screen in "pixels"
-int32_t ScreenWidth()
+int32_t PGE_ScreenWidth()
 { return PGE.vScreenSize.x; }
 
 // Returns the height of the screen in "pixels"
-int32_t ScreenHeight()
+int32_t PGE_ScreenHeight()
 { return PGE.vScreenSize.y; }
 
 // Returns the width of the currently selected drawing target in "pixels"
-int32_t GetDrawTargetWidth()
+int32_t PGE_GetDrawTargetWidth()
 { return PGE.pDrawTarget->width; }
 
 // Returns the height of the currently selected drawing target in "pixels"
-int32_t GetDrawTargetHeight()
+int32_t PGE_GetDrawTargetHeight()
 { return PGE.pDrawTarget->height; }
 
 // Returns the currently active draw target
-olc_Sprite* GetDrawTarget()
+olc_Sprite* PGE_GetDrawTarget()
 { return PGE.pDrawTarget; }
 
 // Resize the primary screen sprite
-void SetScreenSize(int w, int h)
+void PGE_SetScreenSize(int w, int h)
 {
     PGE.vScreenSize.x = w;
     PGE.vScreenSize.y = h;
@@ -1465,18 +1468,18 @@ void SetScreenSize(int w, int h)
         PGE.vLayers[i].bUpdate = true;
     }
         
-    SetDrawTarget(NULL);
+    PGE_SetDrawTarget(NULL);
 
-    ClearBuffer(olc_BLACK, true);
+    PGE_ClearBuffer(olc_BLACK, true);
     olc_Renderer_DisplayFrame();
     
-    ClearBuffer(olc_BLACK, true);
+    PGE_ClearBuffer(olc_BLACK, true);
     olc_Renderer_UpdateViewport(PGE.vViewPos, PGE.vViewSize);
 }
 
 // Specify which Sprite should be the target of drawing functions, use NULL
 // to specify the primary screen
-void SetDrawTarget(olc_Sprite *target)
+void PGE_SetDrawTarget(olc_Sprite *target)
 {
     if(target == NULL)
     {
@@ -1490,15 +1493,15 @@ void SetDrawTarget(olc_Sprite *target)
 }
 
 // Gets the current Frames Per Second
-uint32_t GetFPS()
+uint32_t PGE_GetFPS()
 { return PGE.nLastFPS; }
 
 // Gets last update of elapsed time
-const float GetElapsedTime()
+const float PGE_GetElapsedTime()
 { return PGE.fLastElapsed; }
 
 // Gets Actual Window size
-const olc_vi2d GetWindowSize()
+const olc_vi2d PGE_GetWindowSize()
 { return PGE.vWindowSize; }
 
 
@@ -1507,7 +1510,7 @@ const olc_vi2d GetWindowSize()
 // O------------------------------------------------------------------------------O
 
 // Set the Applications Name (For the Title Bar)
-void SetAppName(const char* title)
+void PGE_SetAppName(const char* title)
 {
     if(PGE.sAppName != NULL)
         free(PGE.sAppName);
@@ -1524,20 +1527,20 @@ void SetAppName(const char* title)
 }
 
 // Layer targeting functions
-void SetLayerTarget(uint8_t layer)
+void PGE_SetLayerTarget(uint8_t layer)
 {
     PGE.pDrawTarget = PGE.vLayers[layer].pDrawTarget;
     PGE.vLayers[layer].bUpdate = true;
     PGE.nTargetLayer = layer;
 }
 
-void EnableLayer(uint8_t layer, bool b)
+void PGE_EnableLayer(uint8_t layer, bool b)
 {
     if(layer < vector_size(PGE.vLayers))
         PGE.vLayers[layer].bShow = b;
 }
 
-void SetLayerOffset(uint8_t layer, float x, float y)
+void PGE_SetLayerOffset(uint8_t layer, float x, float y)
 {
     if(layer < vector_size(PGE.vLayers))
     {
@@ -1547,7 +1550,7 @@ void SetLayerOffset(uint8_t layer, float x, float y)
 
 }
 
-void SetLayerScale(uint8_t layer, float x, float y)
+void PGE_SetLayerScale(uint8_t layer, float x, float y)
 {
     if(layer < vector_size(PGE.vLayers))
     {
@@ -1556,22 +1559,22 @@ void SetLayerScale(uint8_t layer, float x, float y)
     }
 }
 
-void SetLayerTint(uint8_t layer, const olc_Pixel tint)
+void PGE_SetLayerTint(uint8_t layer, const olc_Pixel tint)
 {
     if(layer < vector_size(PGE.vLayers))
         PGE.vLayers[layer].tint = tint;
 }
 
-void SetLayerCustomRenderFunction(uint8_t layer, void (*f)())
+void PGE_SetLayerCustomRenderFunction(uint8_t layer, void (*f)())
 {
     if(layer < vector_size(PGE.vLayers))
         PGE.vLayers[layer].funcHook = f;
 }
 
-olc_LayerDesc* GetLayers()
+olc_LayerDesc* PGE_GetLayers()
 { return PGE.vLayers; }
 
-uint32_t CreateLayer()
+uint32_t PGE_CreateLayer()
 {
     olc_LayerDesc* ld = (olc_LayerDesc*)vector_push(PGE.vLayers);
     
@@ -1593,21 +1596,21 @@ uint32_t CreateLayer()
 // olc_PIXELMODE_NORMAL = No transparency
 // olc_PIXELMODE_MASK   = Transparent if alpha is < 255
 // olc_PIXELMODE_ALPHA  = Full transparency
-void SetPixelMode(int32_t m)
+void PGE_SetPixelMode(int32_t m)
 { PGE.nPixelMode = m; }
 
-int32_t GetPixelMode()
+int32_t PGE_GetPixelMode()
 { return PGE.nPixelMode; }
 
 // Use a custom blend function
-void SetCustomPixelMode(olc_Pixel (*f)(int x, int y, olc_Pixel p1, olc_Pixel p2))
+void PGE_SetCustomPixelMode(olc_Pixel (*f)(int x, int y, olc_Pixel p1, olc_Pixel p2))
 {
     PGE.funcPixelMode = f;
     PGE.nPixelMode = olc_PIXELMODE_CUSTOM;
 }
 
 // Change the blend factor form between 0.0f to 1.0f;
-void SetPixelBlend(float fBlend)
+void PGE_SetPixelBlend(float fBlend)
 {
     PGE.fFrameTimer = fBlend;
     if(PGE.fBlendFactor < 0.0f) PGE.fBlendFactor = 0.0f;
@@ -1615,7 +1618,7 @@ void SetPixelBlend(float fBlend)
 }
 
 // Offset texels by sub-pixel amount (advanced, do not use)
-void SetSubPixelOffset(float ox, float oy)
+void PGE_SetSubPixelOffset(float ox, float oy)
 {
     //vSubPixelOffset.x = ox * vPixel.x;
     //vSubPixelOffset.y = oy * vPixel.y;
@@ -1628,7 +1631,7 @@ void SetSubPixelOffset(float ox, float oy)
 // O------------------------------------------------------------------------------O
 
 // Draws a single Pixel
-bool Draw(int32_t x, int32_t y, olc_Pixel p)
+bool PGE_Draw(int32_t x, int32_t y, olc_Pixel p)
 {
     if(!PGE.pDrawTarget) return false;
 
@@ -1663,7 +1666,7 @@ bool Draw(int32_t x, int32_t y, olc_Pixel p)
 }
 
 // Draws a line from (x1,y1) to (x2,y2)
-void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern)
+void PGE_DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint32_t pattern)
 {
     int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i, temp;
     dx = x2 - x1; dy = y2 - y1;
@@ -1677,7 +1680,7 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
             y1 = y2;
             y2 = temp;
         }
-        for (y = y1; y <= y2; y++) if (rol(&pattern)) Draw(x1, y, p);
+        for (y = y1; y <= y2; y++) if (rol(&pattern)) PGE_Draw(x1, y, p);
         return;
     }
 
@@ -1689,7 +1692,7 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
             x1 = x2;
             x2 = temp;
         }
-        for (x = x1; x <= x2; x++) if (rol(&pattern)) Draw(x, y1, p);
+        for (x = x1; x <= x2; x++) if (rol(&pattern)) PGE_Draw(x, y1, p);
         return;
     }
 
@@ -1703,7 +1706,7 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
         else
         { x = x2; y = y2; xe = x1; }
 
-        if (rol(&pattern)) Draw(x, y, p);
+        if (rol(&pattern)) PGE_Draw(x, y, p);
 
         for (i = 0; x<xe; i++)
         {
@@ -1715,7 +1718,7 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
                 if ((dx<0 && dy<0) || (dx>0 && dy>0)) y = y + 1; else y = y - 1;
                 px = px + 2 * (dy1 - dx1);
             }
-            if (rol(&pattern)) Draw(x, y, p);
+            if (rol(&pattern)) PGE_Draw(x, y, p);
         }
     }
     else
@@ -1725,7 +1728,7 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
         else
         { x = x2; y = y2; ye = y1; }
 
-        if (rol(&pattern)) Draw(x, y, p);
+        if (rol(&pattern)) PGE_Draw(x, y, p);
 
         for (i = 0; y<ye; i++)
         {
@@ -1737,15 +1740,15 @@ void DrawLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2, olc_Pixel p, uint3
                 if ((dx<0 && dy<0) || (dx>0 && dy>0)) x = x + 1; else x = x - 1;
                 py = py + 2 * (dx1 - dy1);
             }
-            if (rol(&pattern)) Draw(x, y, p);
+            if (rol(&pattern)) PGE_Draw(x, y, p);
         }
     }
 }
 
 // Draws a circle located at (x,y) with radius
-void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
+void PGE_DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
 { // Thanks to IanM-Matrix1 #PR121
-    if (radius < 0 || x < -radius || y < -radius || x - GetDrawTargetWidth() > radius || y - GetDrawTargetHeight() > radius)
+    if (radius < 0 || x < -radius || y < -radius || x - PGE_GetDrawTargetWidth() > radius || y - PGE_GetDrawTargetHeight() > radius)
         return;
 
     if (radius > 0)
@@ -1757,16 +1760,16 @@ void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
         while (y0 >= x0) // only formulate 1/8 of circle
         {
             // Draw even octants
-            if (mask & 0x01) Draw(x + x0, y - y0, p);// Q6 - upper right right
-            if (mask & 0x04) Draw(x + y0, y + x0, p);// Q4 - lower lower right
-            if (mask & 0x10) Draw(x - x0, y + y0, p);// Q2 - lower left left
-            if (mask & 0x40) Draw(x - y0, y - x0, p);// Q0 - upper upper left
+            if (mask & 0x01) PGE_Draw(x + x0, y - y0, p);// Q6 - upper right right
+            if (mask & 0x04) PGE_Draw(x + y0, y + x0, p);// Q4 - lower lower right
+            if (mask & 0x10) PGE_Draw(x - x0, y + y0, p);// Q2 - lower left left
+            if (mask & 0x40) PGE_Draw(x - y0, y - x0, p);// Q0 - upper upper left
             if (x0 != 0 && x0 != y0)
             {
-                if (mask & 0x02) Draw(x + y0, y - x0, p);// Q7 - upper upper right
-                if (mask & 0x08) Draw(x + x0, y + y0, p);// Q5 - lower right right
-                if (mask & 0x20) Draw(x - y0, y + x0, p);// Q3 - lower lower left
-                if (mask & 0x80) Draw(x - x0, y - y0, p);// Q1 - upper left left
+                if (mask & 0x02) PGE_Draw(x + y0, y - x0, p);// Q7 - upper upper right
+                if (mask & 0x08) PGE_Draw(x + x0, y + y0, p);// Q5 - lower right right
+                if (mask & 0x20) PGE_Draw(x - y0, y + x0, p);// Q3 - lower lower left
+                if (mask & 0x80) PGE_Draw(x - x0, y - y0, p);// Q1 - upper left left
             }
 
             if (d < 0)
@@ -1776,13 +1779,13 @@ void DrawCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p, uint8_t mask)
         }
     }
     else
-        Draw(x, y, p);
+        PGE_Draw(x, y, p);
 }
 
 // Fills a circle located at (x,y) with radius
-void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p)
+void PGE_FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p)
 { // Thanks to IanM-Matrix1 #PR121
-    if (radius < 0 || x < -radius || y < -radius || x - GetDrawTargetWidth() > radius || y - GetDrawTargetHeight() > radius)
+    if (radius < 0 || x < -radius || y < -radius || x - PGE_GetDrawTargetWidth() > radius || y - PGE_GetDrawTargetHeight() > radius)
         return;
 
     if (radius > 0)
@@ -1810,16 +1813,16 @@ void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p)
         }
     }
     else
-        Draw(x, y, p);
+        PGE_Draw(x, y, p);
 }
 
 // Draws a rectangle at (x,y) to (x+w,y+h)
-void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
+void PGE_DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
 {
-    DrawLine(x, y, x+w, y, p, olc_SOLID);
-    DrawLine(x+w, y, x+w, y+h, p, olc_SOLID);
-    DrawLine(x+w, y+h, x, y+h, p, olc_SOLID);
-    DrawLine(x, y+h, x, y, p, olc_SOLID);
+    PGE_DrawLine(x, y, x+w, y, p, olc_SOLID);
+    PGE_DrawLine(x+w, y, x+w, y+h, p, olc_SOLID);
+    PGE_DrawLine(x+w, y+h, x, y+h, p, olc_SOLID);
+    PGE_DrawLine(x, y+h, x, y, p, olc_SOLID);
 }
 
 // Fills a rectangle at (x,y) to (x+w,y+h)
@@ -1829,30 +1832,30 @@ void PGE_FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
     int32_t y2 = y + h;
 
     if (x < 0) x = 0;
-    if (x >= (int32_t)GetDrawTargetWidth()) x = (int32_t)GetDrawTargetWidth();
+    if (x >= (int32_t)PGE_GetDrawTargetWidth()) x = (int32_t)PGE_GetDrawTargetWidth();
     if (y < 0) y = 0;
-    if (y >= (int32_t)GetDrawTargetHeight()) y = (int32_t)GetDrawTargetHeight();
+    if (y >= (int32_t)PGE_GetDrawTargetHeight()) y = (int32_t)PGE_GetDrawTargetHeight();
 
     if (x2 < 0) x2 = 0;
-    if (x2 >= (int32_t)GetDrawTargetWidth()) x2 = (int32_t)GetDrawTargetWidth();
+    if (x2 >= (int32_t)PGE_GetDrawTargetWidth()) x2 = (int32_t)PGE_GetDrawTargetWidth();
     if (y2 < 0) y2 = 0;
-    if (y2 >= (int32_t)GetDrawTargetHeight()) y2 = (int32_t)GetDrawTargetHeight();
+    if (y2 >= (int32_t)PGE_GetDrawTargetHeight()) y2 = (int32_t)PGE_GetDrawTargetHeight();
 
     for (int i = x; i < x2; i++)
         for (int j = y; j < y2; j++)
-            Draw(i, j, p);
+            PGE_Draw(i, j, p);
 }
 
 // Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
-void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
+void PGE_DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
 {
-    DrawLine(x1, y1, x2, y2, p, olc_SOLID);
-    DrawLine(x2, y2, x3, y3, p, olc_SOLID);
-    DrawLine(x3, y3, x1, y1, p, olc_SOLID);
+    PGE_DrawLine(x1, y1, x2, y2, p, olc_SOLID);
+    PGE_DrawLine(x2, y2, x3, y3, p, olc_SOLID);
+    PGE_DrawLine(x3, y3, x1, y1, p, olc_SOLID);
 }
 
 // https://www.avrfreaks.net/sites/default/files/triangles.c
-void FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
+void PGE_FillTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p)
 {
     int t1x, t2x, y, minx, maxx, t1xp, t2xp;
     bool changed1 = false;
@@ -1986,7 +1989,7 @@ next:
 }
 
 // Draws an entire sprite at well in my defencelocation (x,y)
-void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip)
+void PGE_DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_t flip)
 {
     if (sprite == NULL)
         return;
@@ -2006,7 +2009,7 @@ void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_
             for (int32_t j = 0; j < sprite->height; j++, fy += fym)
                 for (uint32_t is = 0; is < scale; is++)
                     for (uint32_t js = 0; js < scale; js++)
-                        Draw(x + (i*scale) + is, y + (j*scale) + js, olc_Sprite_GetPixel(sprite, fx, fy));
+                        PGE_Draw(x + (i*scale) + is, y + (j*scale) + js, olc_Sprite_GetPixel(sprite, fx, fy));
         }
     }
     else
@@ -2016,7 +2019,7 @@ void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_
         {
             fy = fys;
             for (int32_t j = 0; j < sprite->height; j++, fy += fym)
-                Draw(x + i, y + j, olc_Sprite_GetPixel(sprite, fx, fy));
+                PGE_Draw(x + i, y + j, olc_Sprite_GetPixel(sprite, fx, fy));
         }
     }
 
@@ -2024,7 +2027,7 @@ void DrawSprite(int32_t x, int32_t y, olc_Sprite *sprite, uint32_t scale, uint8_
 
 // Draws an area of a sprite at location (x,y), where the
 // selected area is (ox,oy) to (ox+w,oy+h)
-void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip)
+void PGE_DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int32_t oy, int32_t w, int32_t h, uint32_t scale, uint8_t flip)
 {
     if (sprite == NULL)
         return;
@@ -2043,7 +2046,7 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
             for (int32_t j = 0; j < h; j++, fy += fym)
                 for (uint32_t is = 0; is < scale; is++)
                     for (uint32_t js = 0; js < scale; js++)
-                        Draw(x + (i*scale) + is, y + (j*scale) + js, olc_Sprite_GetPixel(sprite, fx + ox, fy + oy));
+                        PGE_Draw(x + (i*scale) + is, y + (j*scale) + js, olc_Sprite_GetPixel(sprite, fx + ox, fy + oy));
         }
     }
     else
@@ -2053,7 +2056,7 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
         {
             fy = fys;
             for (int32_t j = 0; j < h; j++, fy += fym)
-                Draw(x + i, y + j, olc_Sprite_GetPixel(sprite, fx + ox, fy + oy));
+                PGE_Draw(x + i, y + j, olc_Sprite_GetPixel(sprite, fx + ox, fy + oy));
         }
     }
 
@@ -2064,7 +2067,7 @@ void DrawPartialSprite(int32_t x, int32_t y, olc_Sprite *sprite, int32_t ox, int
 // O------------------------------------------------------------------------------O
 
 // Draws a whole decal, with optional scale and tinting
-void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint)
+void PGE_DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel tint)
 {
     olc_vf2d vScreenSpacePos;
     vScreenSpacePos.x = (pos.x * PGE.vInvScreenSize.x) * 2.0f - 1.0f;
@@ -2088,7 +2091,7 @@ void DrawDecal(olc_vf2d pos, olc_Decal *decal, olc_vf2d scale, const olc_Pixel t
 }
 
 // Draws a region of a decal, with optional scale and tinting
-void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
+void PGE_DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
     olc_vf2d vScreenSpacePos = olc_VF2D(
         (pos.x * PGE.vInvScreenSize.x) * 2.0f - 1.0f,
@@ -2119,7 +2122,7 @@ void DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, olc_v
 }
 
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
-void DrawExplicitDecal(olc_Decal* decal, olc_vf2d* pos, olc_vf2d *uv, const olc_Pixel *col)
+void PGE_DrawExplicitDecal(olc_Decal* decal, olc_vf2d* pos, olc_vf2d *uv, const olc_Pixel *col)
 {
     olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
@@ -2134,7 +2137,7 @@ void DrawExplicitDecal(olc_Decal* decal, olc_vf2d* pos, olc_vf2d *uv, const olc_
 }
 
 // Draws a decal with 4 arbitrary points, warping the texture to look "correct"
-void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint)
+void PGE_DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint)
 {
     // Thanks Nathan Reed, a brilliant article explaining whats going on here
     // http://www.reedbeta.com/blog/quadrilateral-interpolation-part-1/
@@ -2178,7 +2181,7 @@ void DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint)
 }
 
 // As above, but you can specify a region of a decal source sprite
-void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint)
+void PGE_DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint)
 {
     olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
@@ -2223,7 +2226,7 @@ void DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_p
 }
 
 // Draws a decal rotated to specified angle, wit point of rotation offset
-void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
+void PGE_DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
 {
     olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
@@ -2245,7 +2248,7 @@ void DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf
     }
 }
 
-void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
+void PGE_DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
     olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
     olc_DecalInstance_Create(di);
@@ -2273,7 +2276,7 @@ void DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle,
 }
 
 // Draws a multiline string as a decal, with tiniting and scaling
-void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale)
+void PGE_DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_vf2d scale)
 {
     olc_vf2d spos;
     
@@ -2303,14 +2306,14 @@ void DrawStringDecal(olc_vf2d pos, const char* sText, const olc_Pixel col, olc_v
             src_size.x = 8.0f;
             src_size.y = 8.0f;
 
-            DrawPartialDecal(p, PGE.fontDecal, src, src_size, scale, col);
+            PGE_DrawPartialDecal(p, PGE.fontDecal, src, src_size, scale, col);
             spos.x += 8.0f * scale.x;
         }
     }
 }
 
 // Draws a single shaded filled rectangle as a decal
-void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col)
+void PGE_FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col)
 {
     olc_vf2d  points[4];
     olc_vf2d  uvs[4];
@@ -2327,11 +2330,11 @@ void FillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel col)
         cols[i] = col;
     }
 
-    DrawExplicitDecal(NULL, points, uvs, cols);
+    PGE_DrawExplicitDecal(NULL, points, uvs, cols);
 }
 
 // Draws a corner shaded rectangle as a decal
-void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR)
+void PGE_GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, const olc_Pixel colBL, const olc_Pixel colBR, const olc_Pixel colTR)
 {
     olc_vf2d  points[4];
     olc_vf2d  uvs[4];
@@ -2347,20 +2350,20 @@ void GradientFillRectDecal(olc_vf2d pos, olc_vf2d size, const olc_Pixel colTL, c
     cols[0] = colTL; cols[1] = colBL;
     cols[2] = colBR; cols[3] = colTR;
     
-    DrawExplicitDecal(NULL, points, uvs, cols);
+    PGE_DrawExplicitDecal(NULL, points, uvs, cols);
 }
 
 
 
 // Draws a single line of text
-void DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale)
+void PGE_DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t scale)
 {
     int32_t sx = 0;
     int32_t sy = 0;
     int32_t m = PGE.nPixelMode;
     // Thanks @tucna, spotted bug with col.ALPHA :P
-    if(col.a != 255)		SetPixelMode(olc_PIXELMODE_ALPHA);
-    else					SetPixelMode(olc_PIXELMODE_MASK);
+    if(col.a != 255)		PGE_SetPixelMode(olc_PIXELMODE_ALPHA);
+    else					PGE_SetPixelMode(olc_PIXELMODE_MASK);
     for(int i = 0; i < strlen(sText); i++)
     {
         char c = sText[i];
@@ -2380,22 +2383,22 @@ void DrawString(int32_t x, int32_t y, const char* sText, olc_Pixel col, uint32_t
                         if(olc_Sprite_GetPixel(PGE.fontSprite,i + ox * 8, j + oy * 8).r > 0)
                             for (uint32_t is = 0; is < scale; is++)
                                 for (uint32_t js = 0; js < scale; js++)
-                                    Draw(x + sx + (i*scale) + is, y + sy + (j*scale) + js, col);
+                                    PGE_Draw(x + sx + (i*scale) + is, y + sy + (j*scale) + js, col);
             }
             else
             {
                 for (uint32_t i = 0; i < 8; i++)
                     for (uint32_t j = 0; j < 8; j++)
                         if(olc_Sprite_GetPixel(PGE.fontSprite,i + ox * 8, j + oy * 8).r > 0)
-                            Draw(x + sx + i, y + sy + j, col);
+                            PGE_Draw(x + sx + i, y + sy + j, col);
             }
             sx += 8 * scale;
         }
     }
-    SetPixelMode(m);
+    PGE_SetPixelMode(m);
 }
 
-olc_vi2d GetTextSize(const char* s)
+olc_vi2d PGE_GetTextSize(const char* s)
 {
     olc_vi2d size = { 0,1 };
     olc_vi2d pos = { 0,1 };
@@ -2415,19 +2418,19 @@ olc_vi2d GetTextSize(const char* s)
 }
 
 // Clears entire draw target to Pixel
-void Clear(olc_Pixel p)
+void PGE_Clear(olc_Pixel p)
 {
-    int pixels = GetDrawTargetWidth() * GetDrawTargetHeight();
-    uint32_t* m = olc_Sprite_GetData(GetDrawTarget());
+    int pixels = PGE_GetDrawTargetWidth() * PGE_GetDrawTargetHeight();
+    uint32_t* m = olc_Sprite_GetData(PGE_GetDrawTarget());
     for(int i = 0; i < pixels; i++) m[i] = p.n;    
 }
 
-void ClearBuffer(olc_Pixel p, bool bDepth)
+void PGE_ClearBuffer(olc_Pixel p, bool bDepth)
 {
     olc_Renderer_ClearBuffer(p, bDepth);
 }
 
-void* EngineThread()
+olc_CrossPlatform_Thread PGE_EngineThread()
 {
     // Allow platform to do stuff here if needed, since its now in the
     // context of this thread
@@ -2453,7 +2456,7 @@ void* EngineThread()
     }
 
     olc_Platform_ThreadCleanUp();
-    return NULL;
+    return olc_CrossPlatform_Thread_Return;
 }
 
 void olc_PGE_UpdateMouse(int32_t x, int32_t y)
@@ -2693,11 +2696,11 @@ void olc_PGE_PrepareEngine()
     PGE.vLayers = (olc_LayerDesc*)vector_type_alloc(olc_LayerDesc);
 
     // Create Primary Layer "0"
-    CreateLayer();
+    PGE_CreateLayer();
 
     PGE.vLayers[0].bUpdate = true;
     PGE.vLayers[0].bShow = true;
-    SetDrawTarget(NULL);
+    PGE_SetDrawTarget(NULL);
 
     // Construct default font sheet
     olc_PGE_ConstructFontSheet();
@@ -3097,7 +3100,7 @@ LRESULT CALLBACK olc_Platform_WindowEvent(HWND hWnd, UINT uMsg, WPARAM wParam, L
     case WM_MBUTTONUP:	olc_PGE_UpdateMouseState(2, false);                                                 return 0;
     case WM_CLOSE:		olc_PGE_Terminate();                                                                return 0;
     case WM_DESTROY:	PostQuitMessage(0);                                                                 return 0;
-    case WM_SETCURSOR:  SetCursor(IsMouseCursorVisible() ? olc_ArrowCursor : olc_InvisibleCursor); return 0;
+    case WM_SETCURSOR:  SetCursor(PGE_IsMouseCursorVisible() ? olc_ArrowCursor : olc_InvisibleCursor); return 0;
     }
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
@@ -3428,7 +3431,7 @@ int32_t olc_Platform_StartSystemEventLoop()
 
 int32_t olc_Platform_HandleSystemEvent()
 {
-    if(IsMouseCursorVisible())
+    if(PGE_IsMouseCursorVisible())
         XDefineCursor(olc_Display, olc_Window, olc_ArrowCursor);
     else
         XDefineCursor(olc_Display, olc_Window, olc_InvisibleCursor);
