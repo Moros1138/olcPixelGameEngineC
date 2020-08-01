@@ -18,3 +18,5 @@ bin/GLtest
 demos/bin/decals
 
 demos/bin/drawing
+
+*.exe
