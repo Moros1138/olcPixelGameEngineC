@@ -20,3 +20,5 @@ demos/bin/decals
 demos/bin/drawing
 
 *.exe
+
+demos/bin/example

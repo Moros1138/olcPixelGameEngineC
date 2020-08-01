@@ -165,7 +165,7 @@ bool OnUserCreate()
     return true;
 }
 
-bool OnUserUpdate(float fElapsedTime) override
+bool OnUserUpdate(float fElapsedTime)
 {
     // called once per frame, draws random coloured pixels
     for (int x = 0; x < ScreenWidth(); x++)
@@ -209,6 +209,8 @@ int main()
 // Linux and MinGW Specific Macros
 #if defined(__linux__) || defined(__MINGW32__)
 #include <pthread.h>
+#define olc_StartThread() pthread_t olc_Thread; pthread_create(&olc_Thread, NULL, EngineThread, NULL)
+#define olc_JoinThread() pthread_join(olc_Thread, NULL)
 #define olc_CrossPlatform_GetTime(t) clock_gettime(CLOCK_MONOTONIC, &t)
 #endif
 
@@ -638,7 +640,7 @@ int32_t GetDrawTargetHeight();
 olc_Sprite* GetDrawTarget();
 // Resize the primary screen sprite
 void SetScreenSize(int w, int h);
-// Specify which Sprite should be the target of drawing functions, use nullptr
+// Specify which Sprite should be the target of drawing functions, use NULL
 // to specify the primary screen
 void SetDrawTarget(olc_Sprite *target);
 // Gets the current Frames Per Second
@@ -696,7 +698,7 @@ void FillCircle(int32_t x, int32_t y, int32_t radius, olc_Pixel p);
 // Draws a rectangle at (x,y) to (x+w,y+h)
 void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
 // Fills a rectangle at (x,y) to (x+w,y+h)
-void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
+void PGE_FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p);
 // Draws a triangle between points (x1,y1), (x2,y2) and (x3,y3)
 void DrawTriangle(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, olc_Pixel p);
 // Flat fills a triangle between points (x1,y1), (x2,y2) and (x3,y3)
@@ -1365,13 +1367,14 @@ int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)())
     PGE.bActive = true;
 
     // TODO: Thread here eventually    
-    EngineThread();
+    olc_StartThread();
+    // EngineThread();
 
     // Some implementations may form an event loop here
     olc_Platform_StartSystemEventLoop();
     
     // TODO: Join Thread    
-
+    olc_JoinThread();
 
     if(olc_Platform_ApplicationCleanUp() != olc_RCODE_OK) return olc_RCODE_FAIL;
 
@@ -1820,7 +1823,7 @@ void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
 }
 
 // Fills a rectangle at (x,y) to (x+w,y+h)
-void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
+void PGE_FillRect(int32_t x, int32_t y, int32_t w, int32_t h, olc_Pixel p)
 {
     int32_t x2 = x + w;
     int32_t y2 = y + h;
@@ -2725,12 +2728,12 @@ void olc_PGE_Terminate()
 // O------------------------------------------------------------------------------O
 // | START RENDERER: OpenGL 1.0 DECLARATIONS                                      |
 // O------------------------------------------------------------------------------O
-#if defined(OLC_GFX_OPENGL10) && !defined(OLC_PGE_SDL_PLATFORM)
+#if defined(OLC_GFX_OPENGL10)
 #if defined(_WIN32)
 	#include <windows.h>
 	#include <GL/gl.h>
 	typedef BOOL(WINAPI wglSwapInterval_t) (int interval);
-	static wglSwapInterval_t* wglSwapInterval = nullptr;
+	static wglSwapInterval_t* wglSwapInterval = NULL;
 	typedef HDC glDeviceContext_t;
 	typedef HGLRC glRenderContext_t;
 #endif
@@ -2752,10 +2755,27 @@ void olc_PGE_Terminate()
 // | END RENDERER: OpenGL 1.0 DECLARATIONS                                        |
 // O------------------------------------------------------------------------------O
 
+// O------------------------------------------------------------------------------O
+// | START PLATFORM: Windows Declarations                                         |
+// O------------------------------------------------------------------------------O
+#if defined(_WIN32)
+
+HCURSOR olc_ArrowCursor;
+HCURSOR olc_InvisibleCursor;
+
+HWND olc_hWnd = NULL;
+wchar_t wsAppName;
+
+#endif
 
 
 // O------------------------------------------------------------------------------O
-// | START PLATFORM: LINUX Declarations                                                       |
+// | END PLATFORM: Windows Declarations                                           |
+// O------------------------------------------------------------------------------O
+
+
+// O------------------------------------------------------------------------------O
+// | START PLATFORM: LINUX Declarations                                           |
 // O------------------------------------------------------------------------------O
 #if defined(__linux__) || defined(__FreeBSD__) 
 
@@ -2794,7 +2814,7 @@ int32_t olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC)
 {
 #if defined(_WIN32)
     // Create Device Context
-    glDeviceContext = GetDC((HWND)(params[0]));
+    glDeviceContext = GetDC(olc_hWnd);
     PIXELFORMATDESCRIPTOR pfd =
     {
         sizeof(PIXELFORMATDESCRIPTOR), 1,
@@ -2804,10 +2824,10 @@ int32_t olc_Renderer_CreateDevice(bool bFullScreen, bool bVSYNC)
     };
 
     int pf = 0;
-    if (!(pf = ChoosePixelFormat(glDeviceContext, &pfd))) return olc::FAIL;
+    if (!(pf = ChoosePixelFormat(glDeviceContext, &pfd))) return olc_RCODE_FAIL;
     SetPixelFormat(glDeviceContext, pf, &pfd);
 
-    if (!(glRenderContext = wglCreateContext(glDeviceContext))) return olc::FAIL;
+    if (!(glRenderContext = wglCreateContext(glDeviceContext))) return olc_RCODE_FAIL;
     wglMakeCurrent(glDeviceContext, glRenderContext);
 
     // Remove Frame cap
@@ -2991,253 +3011,239 @@ void olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
 #include <gdiplus.h>
 #include <Shlwapi.h>
 
-namespace olc
+// Little utility function to convert from char to wchar in Windows environments
+// depending upon how the compiler is configured. This should not be necessary
+// on linux platforms
+// std::wstring ConvertS2W(std::string s)
+// {
+// #ifdef __MINGW32__
+// 		wchar_t *buffer = new wchar_t[s.length() + 1];
+// 		mbstowcs(buffer, s.c_str(), s.length());
+// 		buffer[s.length()] = L'\0';
+// #else
+// 		int count = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, NULL, 0);
+// 		wchar_t* buffer = new wchar_t[count];
+// 		MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, buffer, count);
+// #endif
+//     std::wstring w(buffer);
+//     delete[] buffer;
+//     return w;
+// }
+
+// Thanks @MaGetzUb for this, which allows sprites to be defined
+// at construction, by initialising the GDI subsystem
+// GdiplusStartupInput startupInput;
+// ULONG_PTR	token;
+
+
+// mouse cursors
+
+int32_t olc_Platform_ApplicationStartUp()
 {
-	// Little utility function to convert from char to wchar in Windows environments
-	// depending upon how the compiler is configured. This should not be necessary
-	// on linux platforms
-	std::wstring ConvertS2W(std::string s)
-	{
-#ifdef __MINGW32__
-		wchar_t *buffer = new wchar_t[s.length() + 1];
-		mbstowcs(buffer, s.c_str(), s.length());
-		buffer[s.length()] = L'\0';
-#else
-		int count = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, NULL, 0);
-		wchar_t* buffer = new wchar_t[count];
-		MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, buffer, count);
-#endif
-		std::wstring w(buffer);
-		delete[] buffer;
-		return w;
-	}
+    // GdiplusStartup(&token, &startupInput, NULL);
+    return olc_RCODE_OK;
+}
 
-	// Thanks @MaGetzUb for this, which allows sprites to be defined
-	// at construction, by initialising the GDI subsystem
-	static class GDIPlusStartup
-	{
-	public:
-		GDIPlusStartup()
-		{
-			Gdiplus::GdiplusStartupInput startupInput;
-			ULONG_PTR	token;
-			Gdiplus::GdiplusStartup(&token, &startupInput, NULL);
-		};
-	} gdistartup;
+int32_t olc_Platform_ApplicationCleanUp()
+{ return olc_RCODE_OK; }
 
-	// mouse cursors
-	HCURSOR olc_ArrowCursor;
-	HCURSOR olc_InvisibleCursor;
+int32_t olc_Platform_ThreadStartUp()
+{ return olc_RCODE_OK; }
 
-	class Platform_Windows : public olc::Platform
-	{
-	private:
-		HWND olc_hWnd = nullptr;
-		std::wstring wsAppName;
+int32_t olc_Platform_ThreadCleanUp()
+{
+    olc_Renderer_DestroyDevice();
+    DestroyCursor(olc_InvisibleCursor);
+    PostMessage(olc_hWnd, WM_DESTROY, 0, 0);
+    return olc_RCODE_OK;
+}
 
-	public:
-		virtual olc::rcode ApplicationStartUp() override { return olc::rcode::OK; }
-		virtual olc::rcode ApplicationCleanUp() override { return olc::rcode::OK; }
-		virtual olc::rcode ThreadStartUp() override      { return olc::rcode::OK; }
+int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize)
+{
+    if(olc_Renderer_CreateDevice(bFullScreen, bEnableVSYNC) == olc_RCODE_OK)
+    {
+        olc_Renderer_UpdateViewport(vViewPos, vViewSize);
+        return olc_RCODE_OK;
+    }
+    else
+        return olc_RCODE_FAIL;
+}
 
-		virtual olc::rcode ThreadCleanUp() override
-		{
-			renderer->DestroyDevice();
-			DestroyCursor(olc_InvisibleCursor);
-			PostMessage(olc_hWnd, WM_DESTROY, 0, 0);
-			return olc::OK;
-		}
+// Windows Event Handler - this is statically connected to the windows event system
+LRESULT CALLBACK olc_Platform_WindowEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_MOUSEMOVE:
+    {
+        // Thanks @ForAbby (Discord)
+        uint16_t x = lParam & 0xFFFF; uint16_t y = (lParam >> 16) & 0xFFFF;
+        int16_t ix = *(int16_t*)&x;   int16_t iy = *(int16_t*)&y;
+        olc_PGE_UpdateMouse(ix, iy);
+        return 0;
+    }
+    case WM_SIZE:       olc_PGE_UpdateWindowSize(lParam & 0xFFFF, (lParam >> 16) & 0xFFFF);	                return 0;
+    case WM_MOUSEWHEEL:	olc_PGE_UpdateMouseWheel(GET_WHEEL_DELTA_WPARAM(wParam));                           return 0;			
+    case WM_MOUSELEAVE: olc_PGE_UpdateMouseFocus(false);                                                    return 0;			
+    case WM_SETFOCUS:	olc_PGE_UpdateKeyFocus(true);                                                       return 0;
+    case WM_KILLFOCUS:	olc_PGE_UpdateKeyFocus(false);                                                      return 0;
+    case WM_KEYDOWN:	olc_PGE_UpdateKeyState(inputmap_get(wParam), true);                                 return 0;
+    case WM_KEYUP:		olc_PGE_UpdateKeyState(inputmap_get(wParam), false);                                return 0;
+    case WM_LBUTTONDOWN:olc_PGE_UpdateMouseState(0, true);                                                  return 0;
+    case WM_LBUTTONUP:	olc_PGE_UpdateMouseState(0, false);                                                 return 0;
+    case WM_RBUTTONDOWN:olc_PGE_UpdateMouseState(1, true);                                                  return 0;
+    case WM_RBUTTONUP:	olc_PGE_UpdateMouseState(1, false);                                                 return 0;
+    case WM_MBUTTONDOWN:olc_PGE_UpdateMouseState(2, true);                                                  return 0;
+    case WM_MBUTTONUP:	olc_PGE_UpdateMouseState(2, false);                                                 return 0;
+    case WM_CLOSE:		olc_PGE_Terminate();                                                                return 0;
+    case WM_DESTROY:	PostQuitMessage(0);                                                                 return 0;
+    case WM_SETCURSOR:  SetCursor(IsMouseCursorVisible() ? olc_ArrowCursor : olc_InvisibleCursor); return 0;
+    }
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
 
-		virtual olc::rcode CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc::vi2d& vViewPos, const olc::vi2d& vViewSize) override
-		{
-			if (renderer->CreateDevice({ olc_hWnd }, bFullScreen, bEnableVSYNC) == olc::rcode::OK)
-			{
-				renderer->UpdateViewport(vViewPos, vViewSize);
-				return olc::rcode::OK;
-			}
-			else
-				return olc::rcode::FAIL;
-		}
+int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen)
+{
+    WNDCLASS wc;
+    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hCursor = NULL;
+    wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+    wc.hInstance = GetModuleHandle(NULL);
+    wc.lpfnWndProc = olc_Platform_WindowEvent;
+    wc.cbClsExtra = 0;
+    wc.cbWndExtra = 0;
+    wc.lpszMenuName = NULL;
+    wc.hbrBackground = NULL;
+    wc.lpszClassName = olcT("OLC_PIXEL_GAME_ENGINE");
+    RegisterClass(&wc);
 
-		virtual olc::rcode CreateWindowPane(const olc::vi2d& vWindowPos, olc::vi2d &vWindowSize, bool bFullScreen) override
-		{
-			WNDCLASS wc;
-			wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-			wc.hCursor = NULL;
-			wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-			wc.hInstance = GetModuleHandle(nullptr);
-			wc.lpfnWndProc = olc_WindowEvent;
-			wc.cbClsExtra = 0;
-			wc.cbWndExtra = 0;
-			wc.lpszMenuName = nullptr;
-			wc.hbrBackground = nullptr;
-			wc.lpszClassName = olcT("OLC_PIXEL_GAME_ENGINE");
-			RegisterClass(&wc);
+    // Define window furniture
+    DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
+    DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_THICKFRAME;
 
-			// Define window furniture
-			DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-			DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_THICKFRAME;
+    olc_vi2d vTopLeft = vWindowPos;
 
-			olc::vi2d vTopLeft = vWindowPos;
+    // Handle Fullscreen
+    if (bFullScreen)
+    {
+        dwExStyle = 0;
+        dwStyle = WS_VISIBLE | WS_POPUP;
+        HMONITOR hmon = MonitorFromWindow(olc_hWnd, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi = { sizeof(mi) };
+        if (!GetMonitorInfo(hmon, &mi)) return olc_RCODE_FAIL;
+        vWindowSize = olc_VI2D( mi.rcMonitor.right, mi.rcMonitor.bottom );
+        vTopLeft.x = 0;
+        vTopLeft.y = 0;
+    }
 
-			// Handle Fullscreen
-			if (bFullScreen)
-			{
-				dwExStyle = 0;
-				dwStyle = WS_VISIBLE | WS_POPUP;
-				HMONITOR hmon = MonitorFromWindow(olc_hWnd, MONITOR_DEFAULTTONEAREST);
-				MONITORINFO mi = { sizeof(mi) };
-				if (!GetMonitorInfo(hmon, &mi)) return olc::rcode::FAIL;
-				vWindowSize = { mi.rcMonitor.right, mi.rcMonitor.bottom };
-				vTopLeft.x = 0;
-				vTopLeft.y = 0;
-			}
+    // Keep client size as requested
+    RECT rWndRect = { 0, 0, vWindowSize.x, vWindowSize.y };
+    AdjustWindowRectEx(&rWndRect, dwStyle, FALSE, dwExStyle);
+    int width = rWndRect.right - rWndRect.left;
+    int height = rWndRect.bottom - rWndRect.top;
 
-			// Keep client size as requested
-			RECT rWndRect = { 0, 0, vWindowSize.x, vWindowSize.y };
-			AdjustWindowRectEx(&rWndRect, dwStyle, FALSE, dwExStyle);
-			int width = rWndRect.right - rWndRect.left;
-			int height = rWndRect.bottom - rWndRect.top;
+    olc_hWnd = CreateWindowEx(dwExStyle, olcT("OLC_PIXEL_GAME_ENGINE"), olcT(""), dwStyle,
+        vTopLeft.x, vTopLeft.y, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
 
-			olc_hWnd = CreateWindowEx(dwExStyle, olcT("OLC_PIXEL_GAME_ENGINE"), olcT(""), dwStyle,
-				vTopLeft.x, vTopLeft.y, width, height, NULL, NULL, GetModuleHandle(nullptr), this);
+    // Create Keyboard Mapping
+    inputmap_init();
 
-			// Create Keyboard Mapping
-			mapKeys[0x00] = Key::NONE;
-			mapKeys[0x41] = Key::A; mapKeys[0x42] = Key::B; mapKeys[0x43] = Key::C; mapKeys[0x44] = Key::D; mapKeys[0x45] = Key::E;
-			mapKeys[0x46] = Key::F; mapKeys[0x47] = Key::G; mapKeys[0x48] = Key::H; mapKeys[0x49] = Key::I; mapKeys[0x4A] = Key::J;
-			mapKeys[0x4B] = Key::K; mapKeys[0x4C] = Key::L; mapKeys[0x4D] = Key::M; mapKeys[0x4E] = Key::N; mapKeys[0x4F] = Key::O;
-			mapKeys[0x50] = Key::P; mapKeys[0x51] = Key::Q; mapKeys[0x52] = Key::R; mapKeys[0x53] = Key::S; mapKeys[0x54] = Key::T;
-			mapKeys[0x55] = Key::U; mapKeys[0x56] = Key::V; mapKeys[0x57] = Key::W; mapKeys[0x58] = Key::X; mapKeys[0x59] = Key::Y;
-			mapKeys[0x5A] = Key::Z;
+    inputmap_set(0x00, olc_NONE); inputmap_set(0x41, olc_A); inputmap_set(0x42, olc_B);
+    inputmap_set(0x43, olc_C); inputmap_set(0x44, olc_D); inputmap_set(0x45, olc_E);
+    inputmap_set(0x46, olc_F); inputmap_set(0x47, olc_G); inputmap_set(0x48, olc_H);
+    inputmap_set(0x49, olc_I); inputmap_set(0x4A, olc_J); inputmap_set(0x4B, olc_K);
+    inputmap_set(0x4C, olc_L); inputmap_set(0x4D, olc_M); inputmap_set(0x4E, olc_N);
+    inputmap_set(0x4F, olc_O); inputmap_set(0x50, olc_P); inputmap_set(0x51, olc_Q);
+    inputmap_set(0x52, olc_R); inputmap_set(0x53, olc_S); inputmap_set(0x54, olc_T);
+    inputmap_set(0x55, olc_U); inputmap_set(0x56, olc_V); inputmap_set(0x57, olc_W);
+    inputmap_set(0x58, olc_X); inputmap_set(0x59, olc_Y); inputmap_set(0x5A, olc_Z);
 
-			mapKeys[VK_F1] = Key::F1; mapKeys[VK_F2] = Key::F2; mapKeys[VK_F3] = Key::F3; mapKeys[VK_F4] = Key::F4;
-			mapKeys[VK_F5] = Key::F5; mapKeys[VK_F6] = Key::F6; mapKeys[VK_F7] = Key::F7; mapKeys[VK_F8] = Key::F8;
-			mapKeys[VK_F9] = Key::F9; mapKeys[VK_F10] = Key::F10; mapKeys[VK_F11] = Key::F11; mapKeys[VK_F12] = Key::F12;
+    inputmap_set(VK_F1, olc_F1); inputmap_set(VK_F2, olc_F2); inputmap_set(VK_F3, olc_F3); inputmap_set(VK_F4, olc_F4);
+    inputmap_set(VK_F5, olc_F5); inputmap_set(VK_F6, olc_F6); inputmap_set(VK_F7, olc_F7); inputmap_set(VK_F8, olc_F8);
+    inputmap_set(VK_F9, olc_F9); inputmap_set(VK_F10, olc_F10); inputmap_set(VK_F11, olc_F11); inputmap_set(VK_F12, olc_F12);
 
-			mapKeys[VK_DOWN] = Key::DOWN; mapKeys[VK_LEFT] = Key::LEFT; mapKeys[VK_RIGHT] = Key::RIGHT; mapKeys[VK_UP] = Key::UP;
-			mapKeys[VK_RETURN] = Key::ENTER; //mapKeys[VK_RETURN] = Key::RETURN;
+    inputmap_set(VK_DOWN, olc_DOWN); inputmap_set(VK_LEFT, olc_LEFT); inputmap_set(VK_RIGHT, olc_RIGHT); inputmap_set(VK_UP, olc_UP);
+    inputmap_set(VK_RETURN, olc_ENTER); //inputmap_set(VK_RETURN, olc_RETURN);
 
-			mapKeys[VK_BACK] = Key::BACK; mapKeys[VK_ESCAPE] = Key::ESCAPE; mapKeys[VK_RETURN] = Key::ENTER; mapKeys[VK_PAUSE] = Key::PAUSE;
-			mapKeys[VK_SCROLL] = Key::SCROLL; mapKeys[VK_TAB] = Key::TAB; mapKeys[VK_DELETE] = Key::DEL; mapKeys[VK_HOME] = Key::HOME;
-			mapKeys[VK_END] = Key::END; mapKeys[VK_PRIOR] = Key::PGUP; mapKeys[VK_NEXT] = Key::PGDN; mapKeys[VK_INSERT] = Key::INS;
-			mapKeys[VK_SHIFT] = Key::SHIFT; mapKeys[VK_CONTROL] = Key::CTRL;
-			mapKeys[VK_SPACE] = Key::SPACE;
+    inputmap_set(VK_BACK, olc_BACK); inputmap_set(VK_ESCAPE, olc_ESCAPE); inputmap_set(VK_RETURN, olc_ENTER); inputmap_set(VK_PAUSE, olc_PAUSE);
+    inputmap_set(VK_SCROLL, olc_SCROLL); inputmap_set(VK_TAB, olc_TAB); inputmap_set(VK_DELETE, olc_DEL); inputmap_set(VK_HOME, olc_HOME);
+    inputmap_set(VK_END, olc_END); inputmap_set(VK_PRIOR, olc_PGUP); inputmap_set(VK_NEXT, olc_PGDN); inputmap_set(VK_INSERT, olc_INS);
+    inputmap_set(VK_SHIFT, olc_SHIFT); inputmap_set(VK_CONTROL, olc_CTRL);
+    inputmap_set(VK_SPACE, olc_SPACE);
 
-			mapKeys[0x30] = Key::K0; mapKeys[0x31] = Key::K1; mapKeys[0x32] = Key::K2; mapKeys[0x33] = Key::K3; mapKeys[0x34] = Key::K4;
-			mapKeys[0x35] = Key::K5; mapKeys[0x36] = Key::K6; mapKeys[0x37] = Key::K7; mapKeys[0x38] = Key::K8; mapKeys[0x39] = Key::K9;
+    inputmap_set(0x30, olc_K0); inputmap_set(0x31, olc_K1); inputmap_set(0x32, olc_K2); inputmap_set(0x33, olc_K3); inputmap_set(0x34, olc_K4);
+    inputmap_set(0x35, olc_K5); inputmap_set(0x36, olc_K6); inputmap_set(0x37, olc_K7); inputmap_set(0x38, olc_K8); inputmap_set(0x39, olc_K9);
 
-			mapKeys[VK_NUMPAD0] = Key::NP0; mapKeys[VK_NUMPAD1] = Key::NP1; mapKeys[VK_NUMPAD2] = Key::NP2; mapKeys[VK_NUMPAD3] = Key::NP3; mapKeys[VK_NUMPAD4] = Key::NP4;
-			mapKeys[VK_NUMPAD5] = Key::NP5; mapKeys[VK_NUMPAD6] = Key::NP6; mapKeys[VK_NUMPAD7] = Key::NP7; mapKeys[VK_NUMPAD8] = Key::NP8; mapKeys[VK_NUMPAD9] = Key::NP9;
-			mapKeys[VK_MULTIPLY] = Key::NP_MUL; mapKeys[VK_ADD] = Key::NP_ADD; mapKeys[VK_DIVIDE] = Key::NP_DIV; mapKeys[VK_SUBTRACT] = Key::NP_SUB; mapKeys[VK_DECIMAL] = Key::NP_DECIMAL;
-			
-			BYTE cursorAndMask[128];
-			BYTE cursorXorMask[128];
-			for(int i = 0; i < 128; i++)
-			{
-				cursorAndMask[i] = 0xff;
-				cursorXorMask[i] = 0x00;
-			}
-			
-			// create Arrow Mouse Cursor
-			olc_ArrowCursor = LoadCursor(NULL, IDC_ARROW);
-			
-			// create Invisible Mouse Cursor
-			olc_InvisibleCursor = CreateCursor(wc.hInstance, 0 /* hotspot x */, 0 /* hostpot y */,
-				32 /* width */, 32 /* height */, cursorAndMask, cursorXorMask);
+    inputmap_set(VK_NUMPAD0, olc_NP0); inputmap_set(VK_NUMPAD1, olc_NP1); inputmap_set(VK_NUMPAD2, olc_NP2); inputmap_set(VK_NUMPAD3, olc_NP3); inputmap_set(VK_NUMPAD4, olc_NP4);
+    inputmap_set(VK_NUMPAD5, olc_NP5); inputmap_set(VK_NUMPAD6, olc_NP6); inputmap_set(VK_NUMPAD7, olc_NP7); inputmap_set(VK_NUMPAD8, olc_NP8); inputmap_set(VK_NUMPAD9, olc_NP9);
+    inputmap_set(VK_MULTIPLY, olc_NP_MUL); inputmap_set(VK_ADD, olc_NP_ADD); inputmap_set(VK_DIVIDE, olc_NP_DIV); inputmap_set(VK_SUBTRACT, olc_NP_SUB); inputmap_set(VK_DECIMAL, olc_NP_DECIMAL);
+    
+    BYTE cursorAndMask[128];
+    BYTE cursorXorMask[128];
+    for(int i = 0; i < 128; i++)
+    {
+        cursorAndMask[i] = 0xff;
+        cursorXorMask[i] = 0x00;
+    }
+    
+    // create Arrow Mouse Cursor
+    olc_ArrowCursor = LoadCursor(NULL, IDC_ARROW);
+    
+    // create Invisible Mouse Cursor
+    olc_InvisibleCursor = CreateCursor(wc.hInstance, 0 /* hotspot x */, 0 /* hostpot y */,
+        32 /* width */, 32 /* height */, cursorAndMask, cursorXorMask);
 
-			return olc::OK;
-		}
+    return olc_RCODE_OK;
+}
 
-		virtual olc::rcode SetWindowTitle(const std::string& s) override
-		{
-		#ifdef UNICODE
-			SetWindowText(olc_hWnd, ConvertS2W(s).c_str());
-		#else
-			SetWindowText(olc_hWnd, s.c_str());
-		#endif
-			return olc::OK;
-		}
+int32_t olc_Platform_SetWindowTitle(const char* s)
+{
+// #ifdef UNICODE
+    // olc_Platform_SetWindowText(olc_hWnd, ConvertS2W(s));
+// #else
+    SetWindowText(olc_hWnd, s);
+// #endif
+    return olc_RCODE_OK;
+}
 
-		virtual olc::rcode StartSystemEventLoop() override
-		{
-			MSG msg;
-			while (GetMessage(&msg, NULL, 0, 0) > 0)
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			return olc::OK;
-		}
+int32_t olc_Platform_StartSystemEventLoop()
+{
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return olc_RCODE_OK;
+}
 
-		virtual olc::rcode HandleSystemEvent() override { return olc::rcode::FAIL; }
+int32_t olc_Platform_HandleSystemEvent()
+{ return olc_RCODE_FAIL; }
 
-		// Windows Event Handler - this is statically connected to the windows event system
-		static LRESULT CALLBACK olc_WindowEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-		{
-			switch (uMsg)
-			{
-			case WM_MOUSEMOVE:
-			{
-				// Thanks @ForAbby (Discord)
-				uint16_t x = lParam & 0xFFFF; uint16_t y = (lParam >> 16) & 0xFFFF;
-				int16_t ix = *(int16_t*)&x;   int16_t iy = *(int16_t*)&y;
-				ptrPGE->olc_UpdateMouse(ix, iy);
-				return 0;
-			}
-			case WM_SIZE:       ptrPGE->olc_UpdateWindowSize(lParam & 0xFFFF, (lParam >> 16) & 0xFFFF);	             return 0;
-			case WM_MOUSEWHEEL:	ptrPGE->olc_UpdateMouseWheel(GET_WHEEL_DELTA_WPARAM(wParam));                        return 0;			
-			case WM_MOUSELEAVE: ptrPGE->olc_UpdateMouseFocus(false);                                                 return 0;			
-			case WM_SETFOCUS:	ptrPGE->olc_UpdateKeyFocus(true);                                                    return 0;
-			case WM_KILLFOCUS:	ptrPGE->olc_UpdateKeyFocus(false);                                                   return 0;
-			case WM_KEYDOWN:	ptrPGE->olc_UpdateKeyState(mapKeys[wParam], true);                                   return 0;
-			case WM_KEYUP:		ptrPGE->olc_UpdateKeyState(mapKeys[wParam], false);                                  return 0;
-			case WM_LBUTTONDOWN:ptrPGE->olc_UpdateMouseState(0, true);                                               return 0;
-			case WM_LBUTTONUP:	ptrPGE->olc_UpdateMouseState(0, false);                                              return 0;
-			case WM_RBUTTONDOWN:ptrPGE->olc_UpdateMouseState(1, true);                                               return 0;
-			case WM_RBUTTONUP:	ptrPGE->olc_UpdateMouseState(1, false);                                              return 0;
-			case WM_MBUTTONDOWN:ptrPGE->olc_UpdateMouseState(2, true);                                               return 0;
-			case WM_MBUTTONUP:	ptrPGE->olc_UpdateMouseState(2, false);                                              return 0;
-			case WM_CLOSE:		ptrPGE->olc_Terminate();                                                             return 0;
-			case WM_DESTROY:	PostQuitMessage(0);                                                                  return 0;
-			case WM_SETCURSOR:  SetCursor((ptrPGE->IsMouseCursorVisible()) ? olc_ArrowCursor : olc_InvisibleCursor); return 0;
-			}
-			return DefWindowProc(hWnd, uMsg, wParam, lParam);
-		}
-	};
+// On Windows load images using GDI+ library
+olc_Sprite* olc_Sprite_LoadFromFile(const char *sImageFile)
+{
 
-	// On Windows load images using GDI+ library
-	olc::rcode Sprite::LoadFromFile(const std::string& sImageFile, olc::ResourcePack *pack)
-	{
-		UNUSED(pack);
-		Gdiplus::Bitmap *bmp = nullptr;
-		if (pack != nullptr)
-		{
-			// Load sprite from input stream
-			ResourceBuffer rb = pack->GetFileBuffer(sImageFile);
-			bmp = Gdiplus::Bitmap::FromStream(SHCreateMemStream((BYTE*)rb.vMemory.data(), UINT(rb.vMemory.size())));
-		}
-		else
-		{
-			// Load sprite from file
-			bmp = Gdiplus::Bitmap::FromFile(ConvertS2W(sImageFile).c_str());
-		}
-		
-		if (bmp->GetLastStatus() != Gdiplus::Ok) return olc::NO_FILE;
-		width = bmp->GetWidth();
-		height = bmp->GetHeight();
-		pColData = new Pixel[width * height];
+    // Gdiplus::Bitmap *bmp = NULL;
+    // // Load sprite from file
+    // bmp = Gdiplus::Bitmap::FromFile(ConvertS2W(sImageFile).c_str());
+    
+    // if (bmp->GetLastStatus() != Gdiplus::Ok) return olc_RCODE_NO_FILE;
+    // width = bmp->GetWidth();
+    // height = bmp->GetHeight();
+    // pColData = new Pixel[width * height];
 
-		for (int y = 0; y < height; y++)
-			for (int x = 0; x < width; x++)
-			{
-				Gdiplus::Color c;
-				bmp->GetPixel(x, y, &c);
-				SetPixel(x, y, olc::Pixel(c.GetRed(), c.GetGreen(), c.GetBlue(), c.GetAlpha()));
-			}
-		delete bmp;
-		return olc::OK;
-	}
+    // for (int y = 0; y < height; y++)
+    //     for (int x = 0; x < width; x++)
+    //     {
+    //         Gdiplus::Color c;
+    //         bmp->GetPixel(x, y, &c);
+    //         SetPixel(x, y, olc::Pixel(c.GetRed(), c.GetGreen(), c.GetBlue(), c.GetAlpha()));
+    //     }
+    
+    // free(bmp);
+    
+    return NULL;
 }
 
 #endif
