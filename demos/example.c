@@ -18,6 +18,7 @@ bool OnUserDestroy()
 
 int main(int argc, char* argv[])
 {
+    PGE_SetAppName("Example");
     if(PGE_Construct(320, 240, 3, 3, false, false))
         PGE_Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
 
