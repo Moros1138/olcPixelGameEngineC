@@ -3064,21 +3064,19 @@ void olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth)
 // Little utility function to convert from char to wchar in Windows environments
 // depending upon how the compiler is configured. This should not be necessary
 // on linux platforms
-// std::wstring ConvertS2W(std::string s)
-// {
-// #ifdef __MINGW32__
-// 		wchar_t *buffer = new wchar_t[s.length() + 1];
-// 		mbstowcs(buffer, s.c_str(), s.length());
-// 		buffer[s.length()] = L'\0';
-// #else
-// 		int count = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, NULL, 0);
-// 		wchar_t* buffer = new wchar_t[count];
-// 		MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, buffer, count);
-// #endif
-//     std::wstring w(buffer);
-//     delete[] buffer;
-//     return w;
-// }
+wchar_t* ConvertS2W(const char* s)
+{
+#ifdef __MINGW32__
+    wchar_t *buffer = (wchar_t*)calloc(sizeof(wchar_t), strlen(s) + 1);
+    mbstowcs(buffer, s, strlen(s));
+    buffer[strlen(s)] = L'\0';
+#else
+    int count = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
+    wchar_t* buffer = (wchar_t*)calloc(sizeof(wchar_t), strlen(s) + 1);
+    MultiByteToWideChar(CP_UTF8, 0, s, -1, buffer, count);
+#endif
+    return buffer;
+}
 
 // Thanks @MaGetzUb for this, which allows sprites to be defined
 // at construction, by initialising the GDI subsystem
@@ -3252,11 +3250,14 @@ int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindo
 
 int32_t olc_Platform_SetWindowTitle(const char* s)
 {
-    // #ifdef UNICODE
-        // olc_Platform_SetWindowText(olc_hWnd, ConvertS2W(s));
-    // #else
-    SetWindowText(olc_hWnd, (LPCWSTR)s);
-    // #endif
+    #ifdef UNICODE
+        wchar_t* w = ConvertS2W(s);
+        SetWindowText(olc_hWnd, w);
+        free(w);
+    #else
+        SetWindowText(olc_hWnd, s);
+    #endif
+
     return olc_RCODE_OK;
 }
 
