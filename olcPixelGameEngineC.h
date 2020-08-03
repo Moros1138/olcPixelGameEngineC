@@ -3612,13 +3612,7 @@ int32_t olc_Platform_HandleSystemEvent()
     return olc_RCODE_OK;
 }
 
-#define PNG_FAIL \
-{ \
-    fprintf(stderr, "Error loading png: %s\n", sFilename); \
-    exit(EXIT_FAILURE); \
-    return NULL; \
-} 
-
+#define PNG_FAIL { fprintf(stderr, "Error loading png: %s\n", sFilename); exit(EXIT_FAILURE); return NULL; }
 
 olc_Sprite* olc_Sprite_LoadFromFile(const char* sFilename)
 {
