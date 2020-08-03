@@ -213,7 +213,7 @@ int main()
 // START MAKING GdiPlus work in C
 #ifndef GDIPVER
 #define GDIPVER 0x0100
-#endif
+
 typedef struct GdiplusStartupInput {
     UINT32 GdiplusVersion;
     void* DebugEventCallback;
@@ -237,10 +237,11 @@ int32_t __stdcall GdiplusStartup(uint32_t**, const GdiplusStartupInput*, Gdiplus
 void __stdcall GdiplusShutdown(uint32_t*);
 int32_t __stdcall GdiplusNotificationHook(uint32_t**);
 void __stdcall GdiplusNotificationUnhook(uint32_t*);
+#endif
 
 uint32_t* GDI_TOKEN;
-
 GdiplusStartupInput GDI_INPUT;
+
 // END MAKING GdiPlus work in C
 
 #include <Shlwapi.h>
