@@ -36,6 +36,9 @@ float fRotation = 0.0f;
 
 bool OnUserCreate()
 {
+    printf("These demos are expected to be run from the demos/bin directory.\n");
+    printf("If you run into asset loading errors, that's why!\n");
+    
     points = decalInitPosition(olc_VF2D(200, 100), olc_VF2D(96, 96));
 
     sprite = olc_Sprite_Load("../assets/test.png");
