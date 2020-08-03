@@ -312,7 +312,7 @@ XColor                  olc_BlackColor;
 #define olc_CrossPlatform_GetTime(t) timespec_get(&t, TIME_UTC)
 #define olc_CrossPlatform_Thread DWORD WINAPI
 #define olc_CrossPlatform_Thread_Return 0
-#define olc_CrossPlatform_Thread_Start() HANDLE hThread = CreateThread(NULL, 0, PGE_EngineThread, NULL, 0, NULL)
+#define olc_CrossPlatform_Thread_Start() HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)PGE_EngineThread, NULL, 0, NULL)
 #define olc_CrossPlatform_Thread_Join() WaitForSingleObject(hThread, INFINITE); CloseHandle(hThread)
 #endif
 
@@ -919,7 +919,7 @@ void* vector_alloc_initial_capacity(size_t elementSize, size_t initialSize) {
 
 void* vector_alloc_static(size_t elementSize, size_t elements) {
     void* mem = vector_alloc_initial_capacity(elementSize, elements);
-
+    return mem;
 }
 
 void* vector_alloc(size_t elementSize) {
