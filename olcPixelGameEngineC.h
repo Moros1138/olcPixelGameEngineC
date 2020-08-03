@@ -3342,8 +3342,6 @@ olc_Sprite* olc_Sprite_LoadFromFile(const char* sImageFile)
 
     olc_Sprite* sprite = olc_Sprite_Create((int)width, (int)height);
 
-    printf("%f %f\n", width, height);
-
     for (int y = 0; y < (int)height; y++)
     {
         for (int x = 0; x < (int)width; x++)
