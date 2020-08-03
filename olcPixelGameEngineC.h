@@ -3327,24 +3327,26 @@ olc_Sprite* olc_Sprite_LoadFromFile(const char* sImageFile)
 
     wchar_t* wc = ConvertS2W(sImageFile);
 
-    int32_t status = GdipLoadImageFromFile(wc, &bmp);
-
     // Load sprite from file
-    if (status != 0)
+    if(GdipLoadImageFromFile(wc, &bmp) != 0)
     {
         printf("Error loading sprite: %s\n", sImageFile);
         exit(EXIT_FAILURE);
     }
-
+    
+    // we're done with the wchar
+    free(wc);
+    
     float width = 0;
     float height = 0;
 
+    // get the width/height of the sprite
     GdipGetImageDimension(bmp, &width, &height);
 
+    // create a blank sprite
     olc_Sprite* sprite = olc_Sprite_Create((int)width, (int)height);
 
     for (int y = 0; y < (int)height; y++)
-    {
         for (int x = 0; x < (int)width; x++)
         {
             olc_Pixel p;
