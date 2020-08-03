@@ -207,7 +207,43 @@ int main()
 #define VC_EXTRALEAN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-// #include <gdiplus.h>
+#include <stdint.h>
+
+
+// START MAKING GdiPlus work in C
+#ifndef GDIPVER
+#define GDIPVER 0x0100
+#endif
+typedef struct GdiplusStartupInput {
+    UINT32 GdiplusVersion;
+    void* DebugEventCallback;
+    BOOL SuppressBackgroundThread;
+    BOOL SuppressExternalCodecs;
+} GdiplusStartupInput;
+
+typedef int32_t(__stdcall* NotificationHookProc)(uint32_t** token);
+typedef void(__stdcall* NotificationUnhookProc)(uint32_t* token);
+
+typedef struct GdiplusStartupOutput {
+    NotificationHookProc NotificationHook;
+    NotificationUnhookProc NotificationUnhook;
+} GdiplusStartupOutput;
+
+int32_t __stdcall GdipCreateBitmapFromFile(const wchar_t*, void**);
+int32_t __stdcall GdipGetImageHorizontalResolution(void*, float*);
+int32_t __stdcall GdipGetImageVerticalResolution(void*, float*);
+int32_t __stdcall GdipBitmapGetPixel(void*, int32_t, int32_t, uint32_t*);
+
+int32_t __stdcall GdiplusStartup(uint32_t**, const GdiplusStartupInput*, GdiplusStartupOutput*);
+void __stdcall GdiplusShutdown(uint32_t*);
+int32_t __stdcall GdiplusNotificationHook(uint32_t**);
+void __stdcall GdiplusNotificationUnhook(uint32_t*);
+
+uint32_t* GDI_TOKEN;
+
+GdiplusStartupInput GDI_INPUT;
+// END MAKING GdiPlus work in C
+
 #include <Shlwapi.h>
 
 #if defined(OLC_GFX_OPENGL10) // OPENGL ON WINDOWS
