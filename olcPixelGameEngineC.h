@@ -1119,6 +1119,8 @@ olc_Sprite* olc_Sprite_Load(const char* sImageFile)
 
 void olc_Sprite_Destroy(olc_Sprite* sprite)
 {
+    if(sprite == NULL) return;
+
     free(sprite->pixels);
     sprite->pixels = NULL;
 
@@ -1293,6 +1295,8 @@ olc_Decal* olc_Decal_Create(olc_Sprite* sprite)
 
 void olc_Decal_Destroy(olc_Decal* decal)
 {
+    if(decal == NULL) return;
+
     if (decal->id != -1)
     {
         olc_Renderer_DeleteTexture(decal->id);
