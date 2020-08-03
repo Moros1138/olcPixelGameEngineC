@@ -27,9 +27,9 @@ bool OnUserCreate()
 
 bool OnUserUpdate(float fElapsedTime)
 {
-    olc_vf2d vMouse = { (float)GetMouseX(), (float)GetMouseY() };
+    olc_vf2d vMouse = { (float)PGE_GetMouseX(), (float)PGE_GetMouseY() };
 
-    if(GetMouse(0).bPressed)
+    if(PGE_GetMouse(0).bPressed)
     {
         nSelected = -1;
         for(int i = 0; i < 4; i++)
@@ -42,26 +42,26 @@ bool OnUserUpdate(float fElapsedTime)
         }
     }
     
-    if(GetMouse(0).bHeld)
+    if(PGE_GetMouse(0).bHeld)
         points[nSelected] = vMouse;
 
-    if(GetMouse(0).bReleased)
+    if(PGE_GetMouse(0).bReleased)
         nSelected = -1;
     
-    Clear(olc_BLACK);
+    PGE_Clear(olc_BLACK);
     for(int i = 0; i < 4; i++)
     {
         if(nSelected == i)
-            FillCircle(points[i].x, points[i].y, 2, olc_YELLOW);
+            PGE_FillCircle(points[i].x, points[i].y, 2, olc_YELLOW);
         else if(mag(points[i], vMouse) < 10.0 && nSelected == -1)
-            FillCircle(points[i].x, points[i].y, 2, olc_BLUE);
+            PGE_FillCircle(points[i].x, points[i].y, 2, olc_BLUE);
         else
-            FillCircle(points[i].x, points[i].y, 2, olc_WHITE);
+            PGE_FillCircle(points[i].x, points[i].y, 2, olc_WHITE);
     }
         
-    DrawWarpedDecal(decal, points, olc_WHITE);
+    PGE_DrawWarpedDecal(decal, points, olc_WHITE);
 
-    return !GetKey(olc_ESCAPE).bPressed;
+    return !PGE_GetKey(olc_ESCAPE).bPressed;
 }
 
 bool OnUserDestroy()

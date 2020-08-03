@@ -22,3 +22,5 @@ demos/bin/drawing
 *.exe
 
 demos/bin/example
+
+demos/bin/sprites
