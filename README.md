@@ -1,153 +1,105 @@
-# olcPixelGameEngine (For C)
+# olcPixelGameEngineC
+This is the C port of the [olcPixelGameEngine by Javidx9](https://github.com/OneLoneCoder/olcPixelGameEngine).
 
-This is an **"IN PROGRESS"** repository that exists for the sole purpose of tracking my progress as time goes on.
-### Current Status (NOT WORKING)
+Every feature of the olcPixelGameEngine up until, inclusive, v2.06
+has been fully ported, with the exception of the ResourcePack. I
+have personally tested it to work on Linux and Windows, however it
+has NOT been extensively tested. There are likely to be countless
+bugs and optomizations that will be discovered over time and I look
+forward to squashing each of the bugs and optomizing!
 
-Anything in here that is not commented out has been implemented. 
-```c
-// Pixels
+**You only need the one file - olcPixelGameEngineC.h - included in your project!**
 
-olc_Pixel olc_PixelDefault();
-olc_Pixel olc_PixelRAW(uint32_t p);
-olc_Pixel olc_PixelRGB(uint8_t red, uint8_t green, uint8_t blue);
-olc_Pixel olc_PixelRGBA(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha);
-olc_Pixel olc_PixelF(float red, float green, float blue, float alpha);
-bool      olc_PixelCompare(olc_Pixel a, olc_Pixel b);
-void olc_PixelColourInit();
+Everything feature of the olcPixelGameEngine up until v2.06 has been
+fully ported, with the exception of the ``olc::ResourcePack`` and has
+I have personally tested it to work on Linux (gcc), MinGW (gcc), and
+Visual Studio 2019 Community.
 
+# Building
 
-typedef struct Sprite
-{
-    int32_t width;
-    int32_t height;
-    uint32_t* pixels;
-    uint32_t modeSample;
-} olc_Sprite;
+## Visual Studio 2019 Community
 
-olc_Sprite* olc_SpriteCreate(int32_t w, int32_t h);
-olc_Sprite* olc_SpriteLoad(const char *sImageFile);
-void        olc_SpriteDestroy(olc_Sprite* sprite);
+Simply:
 
-olc_Sprite* olc_SpriteLoadFromFile(const char *sImageFile);
+- Create an Empty Project.
+- Add A Source File, call it whatever you want, but give it a ``.c`` extension NOT ``.cpp`` 
+- Add the ``olcPixelGameEngineC.h`` header file to the project.
+- Write a program and profit!
 
-// TODO
-// olc_Sprite* olc_SpriteLoadFromPGESprFile(const char *sImageFile);
-// int32_t   olc_SpriteSaveToPGESprFile(olc_Sprite* sprite, const char *sImageFile);
+## GCC
 
-void      olc_Sprite_SetSampleMode(olc_Sprite* sprite, uint32_t mode);
-olc_Pixel olc_Sprite_GetPixel(olc_Sprite* sprite, int32_t x, int32_t y);
-bool      olc_Sprite_SetPixel(olc_Sprite* sprite, int32_t x, int32_t y, olc_Pixel p);
-olc_Pixel olc_Sprite_Sample(olc_Sprite* sprite, float x, float y);
-olc_Pixel olc_Sprite_SampleBL(olc_Sprite* sprite, float u, float v);
-uint32_t* olc_Sprite_GetData(olc_Sprite* sprite);
-
-olc_Decal* olc_DecalCreate(olc_Sprite* sprite);
-void       olc_DecalDestroy(olc_Decal* decal);
-void       olc_DecalUpdate(olc_Decal* decal);
-
-// TODO
-// olc_Renderable* olc_RenderableCreate(uint32_t width, uint32_t height);
-// olc_Renderable* olc_RenderableLoad(const char* sFile);
-// olc_Sprite*     olc_RenderableGetSprite(olc_Renderable* renderable);
-// olc_Decal*      olc_RenderableGetDecal(olc_Renderable* renderable);
-
-
-int32_t Construct(int32_t screen_w, int32_t screen_h, int32_t pixel_w, int32_t pixel_h,
-     bool full_screen, bool vsync);
-int32_t Start(bool (*create)(), bool (*update)(float), bool (*destroy)());
-
-
-// Hardware Interfaces
-bool IsFocused();
-olc_HWButton GetKey(uint8_t k);
-olc_HWButton GetMouse(uint32_t b);
-int32_t GetMouseX();
-int32_t GetMouseY();
-int32_t GetMouseWheel();
-olc_vi2d GetWindowMouse();
-
-
-// Utility
-int32_t ScreenWidth();
-int32_t ScreenHeight();
-int32_t GetDrawTargetWidth();
-int32_t GetDrawTargetHeight();
-olc_Sprite* GetDrawTarget();
-void SetScreenSize(int w, int h);
-void SetDrawTarget(olc_Sprite *target);
-uint32_t GetFPS();
-const float GetElapsedTime();
-const olc_vi2d GetWindowSize();
-bool IsMouseCursorVisible();
-
-
-// CONFIGURATION ROUTINES
-
-
-// Layer targeting functions
-void SetLayerDrawTarget(uint8_t layer);
-void EnableLayer(uint8_t layer, bool b);
-void SetLayerOffset(uint8_t layer, float x, float y);
-void SetLayerScale(uint8_t layer, float x, float y);
-void SetLayerTint(uint8_t layer, const olc_Pixel tint);
-void SetLayerCustomRenderFunction(uint8_t layer, void (*f)());
-
-vector GetLayers();
-uint32_t CreateLayer();
-
-void SetPixelMode(int32_t m);
-int32_t GetPixelMode();
-void SetCustomPixelMode(olc_Pixel (*funcPixelMode)(int x, int y, olc_Pixel p1, olc_Pixel p2));
-void SetPixelBlend(float fBlend);
-void SetSubPixelOffset(float ox, float oy);
-void ShowSystemMouseCursor(bool state);
-
-
-// DRAWING ROUTINES
-
-// TODO
-
-
-// "Break In" Functions
-void olc_PGE_UpdateMouse(int32_t x, int32_t y);
-void olc_PGE_UpdateMouseWheel(int32_t delta);
-void olc_PGE_UpdateWindowSize(int32_t x, int32_t y);
-void olc_PGE_UpdateViewport();
-void olc_PGE_ConstructFontSheet();
-void olc_PGE_CoreUpdate();
-void olc_PGE_PrepareEngine();
-void olc_PGE_UpdateMouseState(int32_t button, bool state);
-void olc_PGE_UpdateKeyState(int32_t key, bool state);
-void olc_PGE_UpdateMouseFocus(bool state);
-void olc_PGE_UpdateKeyFocus(bool state);
-void olc_PGE_Terminate();
-
-// RENDERER
-void       olc_Renderer_PrepareDevice();
-int32_t    olc_Renderer_CreateDevice(vector params, bool bFullScreen, bool bVSYNC);
-int32_t    olc_Renderer_DestroyDevice();
-void       olc_Renderer_DisplayFrame();
-void       olc_Renderer_PrepareDrawing();
-void       olc_Renderer_DrawLayerQuad(const olc_vf2d offset, const olc_vf2d scale, const olc_Pixel tint);
-void       olc_Renderer_DrawDecalQuad(olc_DecalInstance* decal);
-uint32_t   olc_Renderer_CreateTexture(const uint32_t width, const uint32_t height);
-void       olc_Renderer_UpdateTexture(uint32_t id, olc_Sprite* spr);
-uint32_t   olc_Renderer_DeleteTexture(const uint32_t id);
-void       olc_Renderer_ApplyTexture(uint32_t id);
-void       olc_Renderer_UpdateViewport(const olc_vi2d pos, const olc_vi2d size);
-void       olc_Renderer_ClearBuffer(olc_Pixel p, bool bDepth);
-
-
-// PLATFORM
-
-// TODO
-// int32_t olc_Platform_ApplicationStartUp();
-// int32_t olc_Platform_ApplicationCleanUp();
-// int32_t olc_Platform_ThreadStartUp();
-// int32_t olc_Platform_ThreadCleanUp();
-// int32_t olc_Platform_CreateGraphics(bool bFullScreen, bool bEnableVSYNC, const olc_vi2d vViewPos, const olc_vi2d vViewSize);
-// int32_t olc_Platform_CreateWindowPane(const olc_vi2d vWindowPos, olc_vi2d vWindowSize, bool bFullScreen);
-// int32_t olc_Platform_SetWindowTitle(const char* s);
-// int32_t olc_Platform_StartSystemEventLoop();
-// int32_t olc_Platform_HandleSystemEvent();
+### On Linux
 ```
+gcc -o MyPixelGameEngineApp MyPixelGameEngineApp -lm -lX11 -lGL -lpthread -lpng
+```
+
+### On Windows (MSYS2, MinGW)
+```
+gcc -o MyPixelGameEngineApp.exe MyPixelGameEngineApp.c lm -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi
+```
+
+# FAQ
+
+Your questions might end up here one day. Ask me some!
+
+# Credits
+
+## Official PixelGameEngine Shoutouts!
+Javid has expressed his thanks to the following people whose
+contributions has made the Offical PixelGameEngine what it has
+become today! I too, wish to acknowledge them because without
+their contributions to the original, my C port would not have
+been possible.
+
+Eremiell, slavka, gurkanctn,  Phantim, IProgramInCPP, JackOJC,
+KrossX,   Huhlig,   Dragoneye,    Appa,   JustinRichardsMusic,
+SliceNDice,  dandistine, Ralakus,  Gorbit99, raoul, joshinils,
+benedani, Moros1138, SaladinAkara & MagetzUb for advice, ideas
+and testing. 
+
+## Moros1138's Acknowledgements.
+I know it sounds like a copout, but I too want to thank each
+and every one of those who contributed to the original. olcPixelGameEngine
+is an amazing tool that has rekindled my desire to program
+and since I've started I've learned more and more each day.
+
+I want to thank Javid, for the community that he has built. It's an
+inspiration to anybody with a brain. Of course, that's just my opinion.
+
+I also want to thank Gusgo and TarriestPython for their encouragement
+and help debugging and testing.
+
+I want to thank MaeGetzUb for his C vector implementation which made
+my life **SO** much easier.
+
+# License (OLC-3)
+
+Copyright 2018, 2019, 2020 OneLoneCoder.com
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted provided that the following conditions 
+are met:
+
+1. Redistributions or derivations of source code must retain the above 
+   copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions or derivative works in binary form must reproduce 
+   the above copyright notice. This list of conditions and the following 
+   disclaimer must be reproduced in the documentation and/or other 
+   materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its 
+   contributors may be used to endorse or promote products derived 
+   from this software without specific prior written permission.
+    
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

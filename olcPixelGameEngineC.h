@@ -1,5 +1,5 @@
 /*
-    olcPixelGameEngine.h
+    olcPixelGameEngineC.h
 
     +-------------------------------------------------------------+
     |           OneLoneCoder Pixel Game Engine v2.06              |
@@ -8,23 +8,19 @@
 
     What is this?
     ~~~~~~~~~~~~~
-    olc::PixelGameEngine is a single file, cross platform graphics and userinput
-    framework used for games, visualisations, algorithm exploration and learning.
-    It was developed by YouTuber "javidx9" as an assistive tool for many of his
-    videos. The goal of this project is to provide high speed graphics with
-    minimal project setup complexity, to encourage new programmers, younger people,
-    and anyone else that wants to make fun things.
+    This is a C port of the olcPixelGameEngine by Javidx9
 
-    However, olc::PixelGameEngine is not a toy! It is a powerful and fast utility
-    capable of delivering high resolution, high speed, high quality applications
-    which behave the same way regardless of the operating system or platform.
+    #include <shrine-to-the-original-therefore-the-best.h>
 
-    This file provides the core utility set of the olc::PixelGameEngine, including
-    window creation, keyboard/mouse input, main game thread, timing, pixel drawing
-    routines, image/sprite loading and drawing routines, and a bunch of utility
-    types to make rapid development of games/visualisations possible.
+    https://github.com/OneLoneCoder/olcPixelGameEngine
 
-
+    Every feature of the olcPixelGameEngine up until, inclusive, v2.06
+    has been fully ported, with the exception of the ResourcePack. I
+    have personally tested it to work on Linux and Windows, however it
+    has NOT been extensively tested. There are likely to be countless
+    bugs and optomizations that will be discovered over time and I look
+    forward to squashing each of the bugs and optomizing!
+    
     License (OLC-3)
     ~~~~~~~~~~~~~~~
 
@@ -55,8 +51,14 @@
     ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
     SUCH DAMAGE.
 
-    Links
-    ~~~~~
+    Moros1138's Links
+    ~~~~~~~~~~~~~~~~~
+    YouTube:    https://www.youtube.com/channel/UCcSyeMr3dvXo-R2XNVNRrKA
+    Homepage:   https://www.moros1138.com
+    
+
+    OneLoneCoder Links
+    ~~~~~~~~~~~~~~~~~~
     YouTube:	https://www.youtube.com/javidx9
                 https://www.youtube.com/javidx9extra
     Discord:	https://discord.gg/WhwHUMV
@@ -72,7 +74,7 @@
     You will need a modern C compiler, so update yours!
     To compile use the command:
 
-    gcc -o YourProgName YourSource.c -lX11 -lGL -lpthread -lpng -std=c11
+    gcc -o YourProgName YourSource.c -lm -lX11 -lGL -lpthread -lpng -std=c11
 
     On some Linux configurations, the frame rate is locked to the refresh
     rate of the monitor. This engine tries to unlock it but may not be
@@ -105,47 +107,45 @@
     Chromebook, Playstation Portable (PSP) and Nintendo Switch. If you are
     interested in the details of these ports, come and visit the Discord!
 
-    Thanks
-    ~~~~~~
-    I'd like to extend thanks to Eremiell, slavka, gurkanctn, Phantim, IProgramInCPP
-    JackOJC, KrossX, Huhlig, Dragoneye, Appa, JustinRichardsMusic, SliceNDice, dandistine
-    Ralakus, Gorbit99, raoul, joshinils, benedani, Moros1138, SaladinAkara & MagetzUb
-    for advice, ideas and testing, and I'd like to extend my appreciation to the
-    164K YouTube followers,	70+ Patreons and 8K Discord server members who give me
-    the motivation to keep going with all this :D
+    Official PixelGameEngine Shoutouts!
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Javid has expressed his thanks to the following people whose
+    contributions has made the Offical PixelGameEngine what it has
+    become today! I too, wish to acknowledge them because without
+    their contributions to the original, my C port would not have
+    been possible.
 
-    Significant Contributors: @Moros1138, @SaladinAkara, @MaGetzUb, @slavka, @Dragoneye & @Gorbit99
+    Eremiell, slavka, gurkanctn,  Phantim, IProgramInCPP, JackOJC,
+    KrossX,   Huhlig,   Dragoneye,    Appa,   JustinRichardsMusic,
+    SliceNDice,  dandistine, Ralakus,  Gorbit99, raoul, joshinils,
+    benedani, Moros1138, SaladinAkara & MagetzUb for advice, ideas
+    and testing. 
 
-    Special thanks to those who bring gifts!
-    GnarGnarHead.......Domina
-    Gorbit99...........Bastion, Ori & The Blind Forest, Terraria
-    Marti Morta........Gris
-    Danicron...........Terraria
-    SaladinAkara.......Aseprite
-    AlterEgo...........Final Fantasy XII - The Zodiac Age
+    Moros1138's Acknowledgements.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    I know it sounds like a copout,  but I too want to thank each
+    and  every one  of  those  who  contributed to  the original.
+    olcPixelGameEngine  is  an  amazing  tool that  has rekindled
+    my desire to program and since I've started I've learned more
+    and more each day.
 
-    Special thanks to my Patreons too - I wont name you on here, but I've
-    certainly enjoyed my tea and flapjacks :D
+    I want to thank Javid, for the community that  he  has  built.
+    It's an inspiration to anybody with a brain. Of course, that's
+    just my opinion.
+
+    I also want  to  thank Gusgo and TarriestPython  for  their
+    encouragement and help debugging and testing.
+
+    I want to thank MaeGetzUb for his C vector implementation which
+    made my life **SO** much easier.
 
     Author
     ~~~~~~
+    Moros Smith, aka Moros1138
+    
+    olcPixelGameEngine Author
+    ~~~~~~
     David Barr, aka javidx9, ©OneLoneCoder 2018, 2019, 2020
-
-    2.01: Made renderer and platform static for multifile projects
-    2.02: Added Decal destructor, optimised Pixel constructor
-    2.03: Added FreeBSD flags, Added DrawStringDecal()
-    2.04: Windows Full-Screen bug fixed
-    2.05: Added DrawPartialWarpedDecal(), Added DrawPartialRotatedDecal()
-    2.06: +GetTextSize() - returns area occupied by multiline string
-          +GetWindowSize() - returns actual window size
-          +GetElapsedTime() - returns last calculated fElapsedTime
-          +GetWindowMouse() - returns actual mouse location in window
-          +DrawExplicitDecal() - bow-chikka-bow-bow
-          +DrawPartialDecal(pos, size) - draws a partial decal to dpecified area
-          +FillRectDecal() - draws a flat shaded rectangle as a decal
-          +GradientFillRectDecal() - draws a rectangle, with unique colour corners
-          +Modified DrawCircle() & FillCircle() - Thanks IanM-Matrix1 (#PR121)
-          +Gone someway to appeasing pedants
 */
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -155,33 +155,32 @@
 // | Example "Hello World" Program (main.c)                                     |
 // O------------------------------------------------------------------------------O
 /*
-
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngineC.h"
 
 bool OnUserCreate()
-{
-    // Called once at the start, so create things here
-    return true;
-}
+{ return true; }
 
 bool OnUserUpdate(float fElapsedTime)
 {
-    // called once per frame, draws random coloured pixels
-    for (int x = 0; x < ScreenWidth(); x++)
-        for (int y = 0; y < ScreenHeight(); y++)
-            Draw(x, y, olc::Pixel(rand() % 256, rand() % 256, rand()% 256));
-    return true;
+    for(int y = 0; y < PGE_ScreenHeight(); y++)
+        for(int x = 0; x < PGE_ScreenWidth(); x++)
+            PGE_Draw(rand() % PGE_ScreenWidth(), rand() % PGE_ScreenHeight(), olc_PixelRGB(rand() % 255, rand() % 255, rand() % 255));
+            
+    return !PGE_GetKey(olc_ESCAPE).bPressed;
 }
 
-int main()
+bool OnUserDestroy()
+{ return true; }
+
+int main(int argc, char* argv[])
 {
-    if(Construct(256, 240, 4, 4, false, false))
-        Start(&OnUserCreate, &OnUserUpdate, NULL);
+    PGE_SetAppName("Example");
+    if(PGE_Construct(320, 240, 3, 3, false, false))
+        PGE_Start(&OnUserCreate, &OnUserUpdate, &OnUserDestroy);
 
     return 0;
 }
-
 */
 
 #ifndef OLC_PGE_DEF
