@@ -5,6 +5,9 @@ olc_Sprite* sprite;
 
 bool OnUserCreate()
 {
+    printf("These demos are expected to be run from the demos/bin directory.\n");
+    printf("If you run into asset loading errors, that's why!\n");
+
     sprite = olc_Sprite_Load("../assets/test.png");
     return true;
 }
