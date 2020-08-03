@@ -229,9 +229,8 @@ typedef struct GdiplusStartupOutput {
     NotificationUnhookProc NotificationUnhook;
 } GdiplusStartupOutput;
 
-int32_t __stdcall GdipCreateBitmapFromFile(const wchar_t*, void**);
-int32_t __stdcall GdipGetImageHorizontalResolution(void*, float*);
-int32_t __stdcall GdipGetImageVerticalResolution(void*, float*);
+int32_t __stdcall GdipLoadImageFromFile(const wchar_t*, void**);
+int32_t __stdcall GdipGetImageDimension(void*, float*, float*);
 int32_t __stdcall GdipBitmapGetPixel(void*, int32_t, int32_t, uint32_t*);
 
 int32_t __stdcall GdiplusStartup(uint32_t**, const GdiplusStartupInput*, GdiplusStartupOutput*);
@@ -3326,7 +3325,7 @@ olc_Sprite* olc_Sprite_LoadFromFile(const char* sImageFile)
 
     wchar_t* wc = ConvertS2W(sImageFile);
 
-    int32_t status = GdipCreateBitmapFromFile(wc, &bmp);
+    int32_t status = GdipLoadImageFromFile(wc, &bmp);
 
     // Load sprite from file
     if (status != 0)
@@ -3338,14 +3337,15 @@ olc_Sprite* olc_Sprite_LoadFromFile(const char* sImageFile)
     float width = 0;
     float height = 0;
 
-    GdipGetImageHorizontalResolution(bmp, &width);
-    GdipGetImageVerticalResolution(bmp, &height);
+    GdipGetImageDimension(bmp, &width, &height);
 
     olc_Sprite* sprite = olc_Sprite_Create((int)width, (int)height);
 
-    for (int y = 0; y < height; y++)
+    printf("%f %f\n", width, height);
+
+    for (int y = 0; y < (int)height; y++)
     {
-        for (int x = 0; x < width; x++)
+        for (int x = 0; x < (int)width; x++)
         {
             olc_Pixel p;
             uint32_t gPixel = 0;
