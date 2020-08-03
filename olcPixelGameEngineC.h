@@ -2275,7 +2275,7 @@ void PGE_DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint
 
     di->decal = decal;
     di->tint[0] = tint;
-    olc_vf2d center;
+    olc_vf2d center = olc_VF2D(0,0);
     float rd = ((pos[2].x - pos[0].x) * (pos[3].y - pos[1].y) - (pos[3].x - pos[1].x) * (pos[2].y - pos[0].y));
     if (rd != 0)
     {
@@ -2317,7 +2317,7 @@ void PGE_DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d sour
 
     di->decal = decal;
     di->tint[0] = tint;
-    olc_vf2d center;
+    olc_vf2d center = olc_VF2D(0,0);
     float rd = ((pos[2].x - pos[0].x) * (pos[3].y - pos[1].y) - (pos[3].x - pos[1].x) * (pos[2].y - pos[0].y));
     if (rd != 0)
     {
