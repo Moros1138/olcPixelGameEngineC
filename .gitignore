@@ -18,3 +18,11 @@ bin/GLtest
 demos/bin/decals
 
 demos/bin/drawing
+
+*.exe
+
+demos/bin/example
+
+demos/bin/sprites
+
+gdiplus/
