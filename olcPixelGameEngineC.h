@@ -232,6 +232,7 @@ typedef struct GdiplusStartupOutput {
 int32_t __stdcall GdipLoadImageFromFile(const wchar_t*, void**);
 int32_t __stdcall GdipGetImageDimension(void*, float*, float*);
 int32_t __stdcall GdipBitmapGetPixel(void*, int32_t, int32_t, uint32_t*);
+int32_t __stdcall GdipDisposeImage(void*);
 
 int32_t __stdcall GdiplusStartup(uint32_t**, const GdiplusStartupInput*, GdiplusStartupOutput*);
 void __stdcall GdiplusShutdown(uint32_t*);
@@ -3368,12 +3369,8 @@ olc_Sprite* olc_Sprite_LoadFromFile(const char* sImageFile)
 
             olc_Sprite_SetPixel(sprite, x, y, p);
         }
-    }
-    
-    // For some reason this triggers a breakpoint in VS.. I have no idea how to resolve it, so loading sprites is leaky, maybe?
-    //free(&bmp);
-    
-    free(wc);
+
+    GdipDisposeImage(bmp);
 
     return sprite;
 }
