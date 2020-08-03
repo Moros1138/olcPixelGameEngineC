@@ -3322,27 +3322,61 @@ int32_t olc_Platform_HandleSystemEvent()
 // On Windows load images using GDI+ library
 olc_Sprite* olc_Sprite_LoadFromFile(const char* sImageFile)
 {
+    void* bmp = NULL;
 
-    // Gdiplus::Bitmap *bmp = NULL;
-    // // Load sprite from file
-    // bmp = Gdiplus::Bitmap::FromFile(ConvertS2W(sImageFile).c_str());
+    wchar_t* wc = ConvertS2W(sImageFile);
 
-    // if (bmp->GetLastStatus() != Gdiplus::Ok) return olc_RCODE_NO_FILE;
-    // width = bmp->GetWidth();
-    // height = bmp->GetHeight();
-    // pColData = new Pixel[width * height];
+    int32_t status = GdipCreateBitmapFromFile(wc, &bmp);
 
-    // for (int y = 0; y < height; y++)
-    //     for (int x = 0; x < width; x++)
-    //     {
-    //         Gdiplus::Color c;
-    //         bmp->GetPixel(x, y, &c);
-    //         SetPixel(x, y, olc::Pixel(c.GetRed(), c.GetGreen(), c.GetBlue(), c.GetAlpha()));
-    //     }
+    // Load sprite from file
+    if (status != 0)
+    {
+        printf("Error loading sprite: %s\n", sImageFile);
+        exit(EXIT_FAILURE);
+    }
 
-    // free(bmp);
+    float width = 0;
+    float height = 0;
 
-    return NULL;
+    GdipGetImageHorizontalResolution(bmp, &width);
+    GdipGetImageVerticalResolution(bmp, &height);
+
+    olc_Sprite* sprite = olc_Sprite_Create((int)width, (int)height);
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            olc_Pixel p;
+            uint32_t gPixel = 0;
+
+            GdipBitmapGetPixel(bmp, x, y, &gPixel);
+
+            // red
+            p.r = (gPixel & 0x00ff0000) >> 16;
+
+            // green
+            p.g = (gPixel & 0x0000ff00) >> 8;
+
+            // blue
+            p.b = (gPixel & 0x000000ff);
+
+            // alpha
+            p.a = (gPixel & 0xff000000) >> 24;
+
+            if (p.a == 0)
+                p = olc_BLANK;
+
+            olc_Sprite_SetPixel(sprite, x, y, p);
+        }
+    }
+    
+    // For some reason this triggers a breakpoint in VS.. I have no idea how to resolve it, so loading sprites is leaky, maybe?
+    //free(&bmp);
+    
+    free(wc);
+
+    return sprite;
 }
 
 #endif
