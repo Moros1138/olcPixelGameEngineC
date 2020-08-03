@@ -24,3 +24,5 @@ demos/bin/drawing
 demos/bin/example
 
 demos/bin/sprites
+
+gdiplus/
