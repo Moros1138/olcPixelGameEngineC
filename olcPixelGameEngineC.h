@@ -3118,22 +3118,24 @@ wchar_t* ConvertS2W(const char* s)
     return buffer;
 }
 
-// Thanks @MaGetzUb for this, which allows sprites to be defined
-// at construction, by initialising the GDI subsystem
-// GdiplusStartupInput startupInput;
-// ULONG_PTR	token;
-
-
-// mouse cursors
-
 int32_t olc_Platform_ApplicationStartUp()
 {
-    // GdiplusStartup(&token, &startupInput, NULL);
-    return olc_RCODE_OK;
+
+    GDI_INPUT.GdiplusVersion = 1;
+    GDI_INPUT.DebugEventCallback = NULL;
+    GDI_INPUT.SuppressBackgroundThread = false;
+    GDI_INPUT.SuppressExternalCodecs = false;
+
+    int32_t status = GdiplusStartup(&GDI_TOKEN, &GDI_INPUT, NULL);
+    if (status == 0)
+        return olc_RCODE_OK;
+
+    return olc_RCODE_FAIL;
 }
 
 int32_t olc_Platform_ApplicationCleanUp()
 {
+    GdiplusShutdown(GDI_TOKEN);
     return olc_RCODE_OK;
 }
 
