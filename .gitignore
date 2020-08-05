@@ -8,3 +8,21 @@ src/test
 src/test2
 
 src/test.cpp
+
+bin/SDLtest
+
+bin/SDLtest.exe
+
+bin/GLtest
+
+demos/bin/decals
+
+demos/bin/drawing
+
+*.exe
+
+demos/bin/example
+
+demos/bin/sprites
+
+gdiplus/
