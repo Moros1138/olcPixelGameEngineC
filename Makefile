@@ -6,17 +6,19 @@ else
 	LIBS	:= -lm -lX11 -lGL -lpthread -lpng
 endif
 
-.PHONY: example drawing sprites decals
+.PHONY: all example drawing sprites decals
+
+all: example drawing sprites decals
 
 example:
-	gcc -o demos/bin/example$(EXT) demos/example.c $(LIBS)
+	gcc -ggdb3 -Og -o demos/bin/example$(EXT) demos/example.c $(LIBS)
 
 drawing:
-	gcc -o demos/bin/drawing$(EXT) demos/drawing.c $(LIBS)
+	gcc -ggdb3 -Og -o demos/bin/drawing$(EXT) demos/drawing.c $(LIBS)
 
 sprites:
-	gcc -o demos/bin/sprites$(EXT) demos/sprites.c $(LIBS)
+	gcc -ggdb3 -Og -o demos/bin/sprites$(EXT) demos/sprites.c $(LIBS)
 
 decals:
-	gcc -o demos/bin/decals$(EXT) demos/decals.c $(LIBS)
+	gcc -ggdb3 -Og -o demos/bin/decals$(EXT) demos/decals.c $(LIBS)
 
