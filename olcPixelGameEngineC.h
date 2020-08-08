@@ -338,44 +338,37 @@ XColor                  olc_BlackColor;
 #define UNUSED(x) (void)(x)
 
 // O------------------------------------------------------------------------------O
-// | olcPixelGameEngine C VECTOR ( Thanks MaGetzUb )                              |
+// | olcPixelGameEngine C VECTOR ( Thanks for the inspiration MaGetzUb )          |
 // O------------------------------------------------------------------------------O
-typedef void* allocate_t(size_t);
-typedef void* reallocate_t(void*, size_t);
-typedef void release_t(void*);
-
-typedef struct {
-    allocate_t* allocate;
-    reallocate_t* reallocate;
-    release_t* release;
-} AllocatorCallbacks;
-
-typedef struct {
-    size_t allocation;
-    size_t size;
+typedef struct
+{
+    size_t capacity;
     size_t elementSize;
-    size_t staticSize;
-    AllocatorCallbacks callbacks;
-} CVector;
+    size_t size;
+    void* begin;
+    void* end;
+} cvector;
 
-void* vector_alloc_static(size_t elementSize, size_t elements);
-#define vector_type_alloc_static(type, elements) vector_alloc_static(sizeof(type), elements)
-void* vector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks);
-#define cvactor_type_alloc_capacity(type, initialSize) vector_alloc_initial_capacity(sizeof(type), initialSize)
-void* vector_alloc(size_t elementSize);
-#define vector_type_alloc(type) vector_alloc(sizeof(type))
-void vector_free(void* vect);
-void* _vector_push(void** vect);
-#define vector_push(vect) _vector_push((void**)&vect)
-void vector_pop(void* vect);
-size_t vector_size(void* vect);
-//Not really needed..
-void* vector_front(void* vect);
-void* vector_back(void* vect);
-size_t vector_element_size(void* vect);
-void* vector_at(void* vect, size_t index);
-void vector_clear(void* vect);
+#define vector_header(v) size_t stubSize = sizeof(cvector); cvector* cvect = (cvector*)((uint8_t*)v - stubSize)
+#define vector_init(t) (t*)_vector_init(sizeof(t))
+#define vector_destroy(v) _vector_destroy((void**)&v)
+#define vector_reserve(v, c) _vector_reserve((void**)&v, c)
+#define vector_push(v, i) _vector_push((void**)&v, i)
 
+void*    _vector_init(size_t elementSize);
+void     _vector_destroy(void** vect);
+cvector* _vector_reserve(void** vect, size_t capacity);
+void     vector_clear(void* vect);
+
+void*    _vector_push(void** vect, void* item);
+
+size_t   vector_capacity(void* vect);
+size_t   vector_size(void* vect);
+
+void*    vector_begin(void* vect);
+void*    vector_end(void* vect);
+
+bool     vector_empty(void* vect);
 
 // O------------------------------------------------------------------------------O
 // | olcPixelGameEngine INPUT MAPPING                                             |
@@ -886,131 +879,109 @@ static void swap_int(int* a, int* b) { int temp = *a; *a = *b; *b = temp; }
 static bool rol(uint32_t* pattern) { *pattern = (*pattern << 1) | (*pattern >> 31); return (*pattern & 1) ? true : false; }
 
 // O------------------------------------------------------------------------------O
-// | olcPixelGameEngine C VECTOR ( Thanks MaGetzUb )                              |
+// | olcPixelGameEngine C VECTOR ( Thanks for the inspiration MaGetzUb )          |
 // O------------------------------------------------------------------------------O
-void* vector_alloc_initial_capacity_callbacks(size_t elementSize, size_t initialSize, AllocatorCallbacks* callbacks) {
+void* _vector_init(size_t elementSize)
+{
+    cvector* cvect = calloc(1, sizeof(cvector) + elementSize);
+    
+    cvect->capacity    = 1;
+    cvect->elementSize = elementSize;
+    cvect->size        = 0;
+    cvect->begin       = (uint8_t*)cvect + sizeof(cvector);
+    cvect->end         = (uint8_t*)cvect + sizeof(cvector);
 
-    CVector* cvector = NULL;
-    size_t headerSize = sizeof(CVector);
-
-    //allocation
-    cvector = (CVector*)callbacks->allocate(headerSize + elementSize * initialSize);
-    memset(cvector, 0, headerSize + elementSize * initialSize);
-    cvector->allocation = elementSize * initialSize;
-    cvector->size = 0;
-    cvector->elementSize = elementSize;
-    cvector->staticSize = 0;
-
-    cvector->callbacks.allocate = callbacks->allocate;
-    cvector->callbacks.reallocate = callbacks->reallocate;
-    cvector->callbacks.release = callbacks->release;
-
-    return (void*)(((size_t)cvector) + headerSize);
+    return cvect->begin;
 }
 
-void* vector_alloc_initial_capacity(size_t elementSize, size_t initialSize) {
-    AllocatorCallbacks callbacks = {
-        &malloc,
-        &realloc,
-        &free
-    };
-    return vector_alloc_initial_capacity_callbacks(elementSize, initialSize, &callbacks);
+void _vector_destroy(void** vect)
+{
+    vector_header(*vect);
+    free(cvect);
+    cvect = NULL;
+    *vect = NULL;
 }
 
-void* vector_alloc_static(size_t elementSize, size_t elements) {
-    void* mem = vector_alloc_initial_capacity(elementSize, elements);
-    return mem;
-}
+cvector* _vector_reserve(void** vect, size_t capacity)
+{
+    vector_header(*vect);
 
-void* vector_alloc(size_t elementSize) {
-    return vector_alloc_initial_capacity(elementSize, 1);
-}
+    void *allocation = realloc(cvect, (stubSize + (cvect->elementSize * capacity)));
+    if(allocation)
+    {
+        // update? allocation
+        cvect = (cvector*)allocation;
+        
+        // update capacity
+        cvect->capacity = capacity;
+        
+        // ensure valid iterator pointers
+        cvect->begin = (uint8_t*)cvect + stubSize;
+        cvect->end = (uint8_t*)cvect + stubSize + (cvect->elementSize * cvect->size);
+        *vect = cvect->begin;
 
-void vector_free(void* vect) {
-    CVector* vector = (CVector*)((size_t)vect - sizeof(CVector));
-    vector->callbacks.release((void*)vector);
-}
-
-void* _vector_push(void** vect) {
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)(((size_t)*vect) - headerSize);
-    void* back = NULL;
-    void* alloc = NULL;
-    size_t newAlloc = 0;
-    size_t allocated = vector->allocation / vector->elementSize;
-
-
-    if (vector->size == allocated && (!vector->staticSize)) {
-        // printf("Resize! (%li)\n", (vector->size*2));
-        newAlloc = vector->elementSize * vector->size * 2;
-        alloc = vector->callbacks.reallocate(vector, headerSize + newAlloc);
-        if (alloc) {
-            *vect = (void*)((size_t)alloc + headerSize);
-            vector = (CVector*)alloc;
-            vector->allocation = newAlloc;
-        }
-        else {
-            assert("Couldn't resize the vector!" && 0);
-            free(vector);
-            return NULL;
-        }
+        // zero out all new memory
+        size_t newAllocationSize = (cvect->capacity - cvect->size) * cvect->elementSize;
+        memset(cvect->end, 0, newAllocationSize);
     }
-
-    size_t backIdx = vector->size;
-    vector->size++;
-
-    return (void*)((size_t)*vect + vector->elementSize * backIdx);
+    return cvect;
 }
 
-
-void vector_pop(void* vect) {
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)((size_t)vect - headerSize);
-
-    if (vector->size) {
-        vector->size--;
-    }
-}
-
-size_t vector_size(void* vect)
+void* _vector_push(void** vect, void* item)
 {
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)((size_t)vect - headerSize);
-    return vector->size;
-}
+    vector_header(*vect);
 
-//Just for the sake of formality
-void* vector_front(void* vect)
-{
-    return vect;
-}
+    if(cvect->size + 1 > cvect->capacity)
+        cvect = _vector_reserve(vect, cvect->capacity * 2);
+    
+    // insert the item's data
+    if(item != NULL)
+        memcpy(cvect->end, item, cvect->elementSize);
+    else
+        memset(cvect->end, 0, cvect->elementSize);
 
-void* vector_back(void* vect)
-{
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)((size_t)vect - headerSize);
-    return (void*)((size_t)vect + (vector->size - 1) * vector->elementSize);
-}
+    cvect->size++;
+    cvect->end = (uint8_t*)cvect->begin + (cvect->elementSize * cvect->size);
 
-size_t vector_element_size(void* vect)
-{
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)((size_t)vect - headerSize);
-    return vector->elementSize;
-}
-
-void* vector_at(void* vect, size_t index)
-{
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)((size_t)vect - headerSize);
-    return (void*)((size_t)vect + (vector->size - 1) * index);
+    return ((uint8_t*)cvect->end - cvect->elementSize);
 }
 
 void vector_clear(void* vect)
 {
-    size_t headerSize = sizeof(CVector);
-    CVector* vector = (CVector*)((size_t)vect - headerSize);
-    vector->size = 0;
+    vector_header(vect);
+    memset(cvect->begin, 0, cvect->capacity * cvect->elementSize);
+    cvect->size = 0;
+    cvect->end = cvect->begin;
+}
+
+size_t vector_capacity(void* vect)
+{
+    vector_header(vect);
+    return cvect->capacity;
+}
+
+size_t vector_size(void* vect)
+{
+    vector_header(vect);
+    return cvect->size;
+}
+
+void* vector_begin(void* vect)
+{
+    vector_header(vect);
+    return cvect->begin;
+}
+
+void* vector_end(void* vect)
+{
+    vector_header(vect);
+    return cvect->end;
+}
+
+bool vector_empty(void* vect)
+{
+    vector_header(vect);
+    return ((uint8_t*)cvect->begin == (uint8_t*)cvect->end) ? true : false;
 }
 
 // O------------------------------------------------------------------------------O
@@ -1173,17 +1144,30 @@ olc_Sprite* olc_Sprite_LoadFromPGESprFile(const char* sImageFile)
     FILE* fp = fopen(sImageFile, "r");
     if (fp)
     {
-        fread(&width, sizeof(int32_t), 1, fp);
-        fread(&height, sizeof(int32_t), 1, fp);
+        if(fread(&width, sizeof(int32_t), 1, fp) != sizeof(int32_t))
+        {
+            fprintf(stderr, "ERROR: PGESprite Loader failed to get width from header.\n");
+            exit(EXIT_FAILURE);
+        }
+        
+        if(fread(&height, sizeof(int32_t), 1, fp) != sizeof(int32_t))
+        {
+            fprintf(stderr, "ERROR: PGESprite Loader failed to get height from header.\n");
+            exit(EXIT_FAILURE);
+        }
 
         pixels = (uint32_t*)malloc(width * height * sizeof(uint32_t));
         if (pixels == NULL)
         {
-            fprintf(stderr, "Error loading allocating pixel data in PGESprite Loader.\n");
+            fprintf(stderr, "ERROR: PGESprite Loader failed to allocate memory for pixels.\n");
             exit(EXIT_FAILURE);
         }
 
-        fread(pixels, sizeof(uint32_t), width * height, fp);
+        if(fread(pixels, sizeof(uint32_t), width * height, fp) != (width * height))
+        {
+            fprintf(stderr, "ERROR: PGESprite Loader failed to load pixel data.\n");
+            exit(EXIT_FAILURE);
+        }
 
         olc_Sprite* sprite = olc_Sprite_Create(width, height);
 
@@ -1727,7 +1711,7 @@ olc_LayerDesc* PGE_GetLayers()
 
 uint32_t PGE_CreateLayer()
 {
-    olc_LayerDesc* ld = (olc_LayerDesc*)vector_push(PGE.vLayers);
+    olc_LayerDesc* ld = (olc_LayerDesc*)vector_push(PGE.vLayers, NULL);
 
     ld->vOffset = olc_VF2D(0, 0);
     ld->vScale = olc_VF2D(1, 1);
@@ -1735,7 +1719,7 @@ uint32_t PGE_CreateLayer()
     ld->bUpdate = false;
     ld->pDrawTarget = olc_Sprite_Create(PGE.vScreenSize.x, PGE.vScreenSize.y);
     ld->nResID = olc_Renderer_CreateTexture(PGE.vScreenSize.x, PGE.vScreenSize.y);
-    ld->vecDecalInstance = (olc_DecalInstance*)vector_type_alloc(olc_DecalInstance);
+    ld->vecDecalInstance = vector_init(olc_DecalInstance);
     ld->tint = olc_WHITE;
     ld->funcHook = NULL;
 
@@ -2242,7 +2226,7 @@ void PGE_DrawDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d scale, const olc_Pix
     vScreenSpaceDim.x = vScreenSpacePos.x + (2.0f * ((float)(decal->sprite->width) * PGE.vInvScreenSize.x)) * scale.x;
     vScreenSpaceDim.y = vScreenSpacePos.y - (2.0f * ((float)(decal->sprite->height) * PGE.vInvScreenSize.y)) * scale.y;
 
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     di->decal = decal;
@@ -2268,7 +2252,7 @@ void PGE_DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, o
         vScreenSpacePos.y - (2.0f * source_size.y * PGE.vInvScreenSize.y) * scale.y
     );
 
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -2289,7 +2273,7 @@ void PGE_DrawPartialDecal(olc_vf2d pos, olc_Decal* decal, olc_vf2d source_pos, o
 // Draws fully user controlled 4 vertices, pos(pixels), uv(pixels), colours
 void PGE_DrawExplicitDecal(olc_Decal* decal, olc_vf2d* pos, olc_vf2d* uv, const olc_Pixel* col)
 {
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     for (int i = 0; i < 4; i++)
@@ -2306,7 +2290,7 @@ void PGE_DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint
 {
     // Thanks Nathan Reed, a brilliant article explaining whats going on here
     // http://www.reedbeta.com/blog/quadrilateral-interpolation-part-1/
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     di->decal = decal;
@@ -2348,7 +2332,7 @@ void PGE_DrawWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], const olc_Pixel tint
 // As above, but you can specify a region of a decal source sprite
 void PGE_DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d source_pos, olc_vf2d source_size, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     di->decal = decal;
@@ -2393,7 +2377,7 @@ void PGE_DrawPartialWarpedDecal(olc_Decal* decal, olc_vf2d pos[4], olc_vf2d sour
 // Draws a decal rotated to specified angle, wit point of rotation offset
 void PGE_DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -2415,7 +2399,7 @@ void PGE_DrawRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, ol
 
 void PGE_DrawPartialRotatedDecal(olc_vf2d pos, olc_Decal* decal, const float fAngle, olc_vf2d center, olc_vf2d source_pos, olc_vf2d source_size, olc_vf2d scale, const olc_Pixel tint)
 {
-    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance);
+    olc_DecalInstance* di = (olc_DecalInstance*)vector_push(PGE.vLayers[PGE.nTargetLayer].vecDecalInstance, NULL);
     olc_DecalInstance_Create(di);
 
     di->decal = decal; di->tint[0] = tint;
@@ -2860,7 +2844,7 @@ void olc_PGE_PrepareEngine()
     if (olc_Platform_CreateGraphics(PGE.bFullScreen, PGE.bEnableVSYNC, PGE.vViewPos, PGE.vViewSize) == olc_RCODE_FAIL) return;
 
     // Initialize Layer Vector
-    PGE.vLayers = (olc_LayerDesc*)vector_type_alloc(olc_LayerDesc);
+    PGE.vLayers = vector_init(olc_LayerDesc);
 
     // Create Primary Layer "0"
     PGE_CreateLayer();
@@ -3394,12 +3378,9 @@ int32_t olc_Platform_ApplicationStartUp()
 int32_t olc_Platform_ApplicationCleanUp()
 {
     for (size_t i = 0; i < vector_size(PGE.vLayers); i++)
-    {
-        vector_clear(PGE.vLayers[i].vecDecalInstance);
-        vector_free(PGE.vLayers[i].vecDecalInstance);
-    }
-    vector_clear(PGE.vLayers);
-    vector_free(PGE.vLayers);
+        vector_destroy(PGE.vLayers[i].vecDecalInstance);
+
+    vector_destroy(PGE.vLayers);
 
     olc_PGE_DestroyFontSheet();
     olc_Sprite_Destroy(PGE.pDrawTarget);
