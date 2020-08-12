@@ -69,7 +69,7 @@ inspiration to anybody with a brain. Of course, that's just my opinion.
 I also want to thank Gusgo and TarriestPython for their encouragement
 and help debugging and testing.
 
-I want to thank MaeGetzUb for his C vector implementation which made
+I want to thank MaGetzUb for his C vector implementation which made
 my life **SO** much easier.
 
 # License (OLC-3)
