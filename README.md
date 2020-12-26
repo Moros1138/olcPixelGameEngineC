@@ -30,12 +30,12 @@ Simply:
 
 ### On Linux
 ```
-gcc -o MyPixelGameEngineApp MyPixelGameEngineApp -lm -lX11 -lGL -lpthread -lpng
+gcc -o MyPixelGameEngineApp MyPixelGameEngineApp.c -lm -lX11 -lGL -lpthread -lpng
 ```
 
 ### On Windows (MSYS2, MinGW)
 ```
-gcc -o MyPixelGameEngineApp.exe MyPixelGameEngineApp.c lm -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi
+gcc -o MyPixelGameEngineApp.exe MyPixelGameEngineApp.c -lm -luser32 -lgdi32 -lopengl32 -lgdiplus -lShlwapi
 ```
 
 # FAQ
